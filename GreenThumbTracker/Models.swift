@@ -29,24 +29,39 @@ struct UserRole: Codable {
 }
 
 //plants table owned by users
-struct Plant: Codable {
+struct Plant: Codable, Identifiable {
     let id: Int
     let name: String
     let species: String
-    let userID: Int //foreign key to User table
+    let userID: Int? //foreign key to User table, optional for now
 }
 
 //water records table
 struct WaterRecord: Codable, Identifiable{
     let id: Int
-    let plantId: Int
     let amount: Int
     let date: String
-    let uomID: Int //foreign key to unit of measure
+    let plant: NestedPlant
+    let uom: NestedUOM
+
+    var plantId: Int { plant.id }
+    var uomID: Int { uom.id }
+
+    struct NestedPlant: Codable {
+        let id: Int
+        let name: String
+        let species: String
+    }
+
+    struct NestedUOM: Codable {
+        let id: Int
+        let name: String
+        let symbol: String
+    }
 }
 
 //growth record
-struct GrowthRecord: Codable {
+struct GrowthRecord: Codable, Identifiable {
     let id: Int
     let plantId: Int
     let height: Double

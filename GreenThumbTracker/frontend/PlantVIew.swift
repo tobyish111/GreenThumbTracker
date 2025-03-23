@@ -10,57 +10,211 @@ import SwiftUI
 
 struct PlantVIew: View {
     let plant: Plant
-        @State var growthRecords: [GrowthRecord] = []
-        @State var waterRecords: [WaterRecord] = []
-        @State var unitMap: [Int: UnitOfMeasure] = [:] // map UOM id to object
-
-        var body: some View {
+    @State var growthRecords: [GrowthRecord] = []
+    @State var waterRecords: [WaterRecord] = []
+    @State var unitMap: [Int: UnitOfMeasure] = [:] // map UOM id to object
+    @State private var showingWaterForm = false
+    @State private var waterSuccessBanner: String?
+    @State private var showingWaterEditSheet = false
+    
+    
+    
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [.zenGreen.opacity(0.8), .zenBeige.opacity(0.6), .green.opacity(0.7)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Basic Info
-                    Text(plant.name)
-                        .font(.largeTitle)
-                        .bold()
-                    Text("Species: \(plant.species)")
-                        .font(.subheadline)
-                    Divider()
-
-                    // Latest Growth
-                    if let latestGrowth = growthRecords.sorted(by: { $0.date > $1.date }).first {
-                        VStack(alignment: .leading) {
-                            Text("Latest Growth:")
-                                .font(.headline)
-                            Text("\(latestGrowth.height, specifier: "%.2f") \(unitMap[latestGrowth.uomID]?.symbol ?? "") on \(latestGrowth.date)")
+                VStack(spacing: 24) {
+                    Image(systemName: "leaf.circle.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .foregroundColor(.green)
+                        .shadow(color: .green.opacity(0.5), radius: 8, x: 0, y: 4)
+                        .padding(.top, 80)
+                    
+                    //confirmation message
+                    if let message = waterSuccessBanner {
+                        HStack {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundColor(.white)
+                            Text(message)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
                         }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.green)
+                        .cornerRadius(12)
+                        .shadow(radius: 4)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                     }
-
-                    // Watering Log
-                    VStack(alignment: .leading) {
-                        Text("Watering Records")
-                            .font(.headline)
-                        ForEach(waterRecords.sorted(by: { $0.date > $1.date })) { record in
-                            HStack {
-                                Text(record.date)
-                                Spacer()
-                                Text("\(record.amount) \(unitMap[record.uomID]?.symbol ?? "")")
-                            }
+                    
+                    //Plant Header
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(plant.name)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                        
+                        Text("Species: \(plant.species)")
                             .font(.subheadline)
-                            .padding(.vertical, 4)
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
+                    
+                    //Latest Growth
+                    if let latestGrowth = growthRecords.sorted(by: { $0.date > $1.date }).first {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Latest Growth", systemImage: "leaf")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                            
+                            Text("\(latestGrowth.height, specifier: "%.2f") \(unitMap[latestGrowth.uomID]?.symbol ?? "")")
+                                .font(.title2)
+                                .bold()
+                            
+                            Text("on \(latestGrowth.date)")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.9))
+                        .cornerRadius(12)
+                        .shadow(radius: 4)
+                    }
+                    //Watering Log Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        //Section Title with total entries
+                        //chart headers
+                        HStack(spacing: 12) {
+                            Label("Watering Records", systemImage: "drop.fill")
+                                .font(.headline)
+                                .foregroundColor(.blue)
+                            Spacer()
+                            
+                            Button(action: {
+                                loadWaterData()
+                            }){
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Refresh Data")
+                            Spacer()
+                            Text("Entries: \(waterRecords.count)")
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                            Spacer()
+                            Button {
+                                showingWaterEditSheet = true
+                            } label: {
+                                Image(systemName: "square.and.pencil")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Edit")
+                        }
+                        .sheet(isPresented: $showingWaterEditSheet) {
+                            WaterRecordEditView(
+                                plant: plant,
+                                waterRecords: $waterRecords,
+                                unitMap: unitMap,
+                                refreshData: loadWaterData
+                            )
+                        }
+                        //Column Headers
+                        HStack {
+                            Text("Date")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Text("Amount")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        
+                        //Empty state
+                        if waterRecords.isEmpty {
+                            Text("...No water records yet...")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            //Scrollable and Refreshable List
+                            ScrollView {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(waterRecords.sorted(by: { $0.date > $1.date })) { record in
+                                        HStack {
+                                            Text(formattedDate(record.date))
+                                                .font(.subheadline)
+                                            Spacer()
+                                            Text("\(record.amount) \(unitMap[record.uomID]?.symbol ?? "")")
+                                                .font(.subheadline)
+                                                .foregroundColor(.black)
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .frame(maxHeight: 200)
                         }
                     }
-
-                    // Actions
-                    HStack {
-                        Button("Add Growth") {
-                            // Show growth input form
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
+                    //end water records
+                    
+                    
+                    //Action Buttons
+                    HStack(spacing: 20) {
+                        Button(action: {
+                            //Show growth input form
+                        }) {
+                            Label("Add Growth", systemImage: "plus")
                         }
                         .buttonStyle(.borderedProminent)
-
-                        Button("Add Water") {
-                            // Show water input form
+                        //add water record button
+                        Button(action: {
+                            showingWaterForm = true
+                        }) {
+                            Label("Add Water Record", systemImage: "plus")
                         }
                         .buttonStyle(.bordered)
-                    }
+                        .sheet(isPresented: $showingWaterForm) {
+                            AddWaterSheet(
+                                plant: plant,
+                                onSubmit: {
+                                    showingWaterForm = false
+                                    loadWaterData()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                        withAnimation {
+                                            waterSuccessBanner = "Water record added!"
+                                        }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                            withAnimation {
+                                                waterSuccessBanner = nil
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                    }//end hstack
+                    .padding(.top)
+                    
+                    Spacer()
                 }
                 .padding()
             }
@@ -70,15 +224,35 @@ struct PlantVIew: View {
                 loadWaterData()
             }
         }
+    }
+    //loading methods for the UI
+    func loadGrowthData() {
+        // TODO: API call to populate growthRecords
+    }
 
-        // Stub loading methods
-        func loadGrowthData() {
-            // API call to backend → populate growthRecords
+    func loadWaterData() {
+        APIManager.shared.fetchWaterRecords(forPlantId: plant.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let records):
+                    self.waterRecords = records
+                case .failure(let error):
+                    print("Failed to load water records: \(error.localizedDescription)")
+                }
+            }
         }
-
-        func loadWaterData() {
-            // API call to backend → populate waterRecords
+    }
+    //delete water record
+    func deleteWaterRecord(plantId: Int, recordId: Int) {
+        APIManager.shared.deleteWaterRecord(plantId: plantId, recordId: recordId) { result in
+            switch result {
+            case .success:
+                loadWaterData()
+            case .failure(let error):
+                print("Failed to delete water record:", error.localizedDescription)
+            }
         }
+    }
 }
 
 #Preview {

@@ -9,76 +9,66 @@ import SwiftUI
 
 struct LoginView: View {
     @State private var showingLoginForm: Bool = false
-    @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
-    var body: some View {
-        NavigationStack{
-            ZStack {
-            // Zen-inspired gradient background
-            LinearGradient(
-                colors: [
-                    .zenGreen.opacity(0.8),
-                    .zenBeige.opacity(0.6),
-                    .green.opacity(0.7)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            VStack(spacing: 30) {
-                Spacer()
-                
-                // App logo or placeholder
-                Image(systemName: "leaf.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .foregroundStyle(.green)
-                    .shadow(color:.green,radius: 5)
-                
-                // Welcome text
-                VStack(spacing: 10) {
-                    Text("Welcome to")
-                        .font(.title2)
-                    
-                    Text("GreenThumbTracker")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.green)
-                    
-                    Text("Please login to continue.")
-                        .font(.body)
-                    
-                }
-                .multilineTextAlignment(.center)
-                .padding()
-                
-                // Buttons
-                HStack(spacing: 30) {
-                    GreenButton(title: "Login") {
-                        showingLoginForm = true
-                    }
-                    .sheet(isPresented: $showingLoginForm){
-                        LoginFormView(showingLoginForm: $showingLoginForm)
-                    }
-                    
-                    GreenButton(title: "Sign Up") {
-                        // trigger registration logic
-                        print("Not implemented yet!")
-                    }
-                }
-                //invisible nav link
-                NavigationLink(destination: HomePageView(), isActive: $isLoggedIn){
-                    EmptyView()
-                }
-                
-                Spacer()
-            }
-            .padding(.horizontal, 32)
-        }
-        }//end navigation stack
-    }
-}
+       @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
+
+       var body: some View {
+           NavigationStack {
+               ZStack {
+                   LinearGradient(
+                       colors: [.zenGreen.opacity(0.8), .zenBeige.opacity(0.6), .green.opacity(0.7)],
+                       startPoint: .topLeading,
+                       endPoint: .bottomTrailing
+                   )
+                   .ignoresSafeArea()
+
+                   VStack(spacing: 30) {
+                       Spacer()
+
+                       Image(systemName: "leaf.circle.fill")
+                           .resizable()
+                           .scaledToFit()
+                           .frame(width: 100, height: 100)
+                           .foregroundStyle(.green)
+                           .shadow(color: .green, radius: 5)
+
+                       VStack(spacing: 10) {
+                           Text("Welcome to")
+                               .font(.title2)
+
+                           Text("GreenThumbTracker")
+                               .font(.largeTitle)
+                               .fontWeight(.bold)
+                               .foregroundStyle(.green)
+
+                           Text("Please login to continue.")
+                               .font(.body)
+                       }
+                       .multilineTextAlignment(.center)
+                       .padding()
+
+                       HStack(spacing: 30) {
+                           GreenButton(title: "Login") {
+                               showingLoginForm = true
+                           }
+                           .sheet(isPresented: $showingLoginForm) {
+                               LoginFormView(showingLoginForm: $showingLoginForm)
+                           }
+
+                           GreenButton(title: "Sign Up") {
+                               print("Not implemented yet!")
+                           }
+                       }
+
+                       Spacer()
+                   }
+                   .padding(.horizontal, 32)
+               }
+               .navigationDestination(isPresented: $isLoggedIn) {
+                   HomePageView()
+               }
+           }
+       }
+   }
 
 //button
 struct GreenButton: View {
@@ -112,7 +102,7 @@ struct LoginFormView: View {
 
        var body: some View {
            ZStack {
-               // 🌿 Background Gradient
+               //Background Gradient
                LinearGradient(
                    colors: [
                        .zenGreen.opacity(0.8),
@@ -124,7 +114,7 @@ struct LoginFormView: View {
                )
                .ignoresSafeArea()
 
-               // 🌿 Main Login Form
+               //Main Login Form
                VStack(spacing: 20) {
                    Text("Sign In")
                        .font(.largeTitle)

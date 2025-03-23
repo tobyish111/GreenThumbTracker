@@ -9,7 +9,7 @@ import Foundation
 //function to call to any endpoint from our db api!
 class APIManager {
     static let shared = APIManager() //singleton instance
-    private let baseURL = "http://192.168.1.42:8800/api" //when we go live update this when deployed
+    private let baseURL = "http://192.168.1.42:8800/api" //when we go live update this when deployed to the prod url
     
     //generic functiosn for sending requests
     private func request<T: Decodable>(endpoint: String, method: String = "GET", body: Data? = nil, completion: @escaping (Result<T, Error>) -> Void){
@@ -50,11 +50,36 @@ class APIManager {
 
 //extention housing crud operations to db endpoints
 extension APIManager {
+    //adding a plant
+    func addPlant(name: String, species: String, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/plants"
+        let body: [String: Any] = [
+            "name": name,
+            "species": species
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            print("Failed to encode JSON")
+            return
+        }
+
+        request(endpoint: endpoint, method: "POST", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                let message = response["message"] ?? "Plant created!"
+                completion(.success(message))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
     //fetch all plants
     func fetchPlants(completion: @escaping (Result<[Plant], Error>) -> Void){
         request(endpoint: "/plants", completion: completion)
     }
     
+    //WATER RECORD METHODS
     //create water record
     func createWaterRecord(plantId: Int, amount: Int, date: String, completion: @escaping (Result<String, Error>) -> Void){
         let endpoint = "/water/\(plantId)"
@@ -72,6 +97,47 @@ extension APIManager {
             }
         }
     }
+    //get water records
+    func fetchWaterRecords(forPlantId plantId: Int, completion: @escaping (Result<[WaterRecord], Error>) -> Void) {
+        let endpoint = "/water/\(plantId)"
+        request(endpoint: endpoint, completion: completion)
+    }
+    //update water record
+    func updateWaterRecord(plantId: Int, recordId: Int, amount: Int, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/water/\(plantId)/\(recordId)"
+        let body: [String: Any] = [
+            "waterAmount": amount,
+            "waterDate": date,
+            "uomId": uomID
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+        
+        request(endpoint: endpoint, method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Update successful"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    //delete water record
+    func deleteWaterRecord(plantId: Int, recordId: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/water/\(plantId)/\(recordId)"
+        
+        request(endpoint: endpoint, method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Deleted"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+
+    
     //login function for user
     func login(username: String, password: String, completion: @escaping (Result<LoginResponse, Error>) -> Void) {
             let endpoint = "/auth/login"
