@@ -11,6 +11,7 @@ struct ViewPlantsView: View {
     @State private var plants: [Plant] = []
       @State private var isLoading = true
       @State private var errorMessage: String?
+    @Namespace private var navNamespace
 
       var body: some View {
           NavigationStack {
@@ -36,8 +37,11 @@ struct ViewPlantsView: View {
                           ScrollView {
                               LazyVStack(spacing: 16) {
                                   ForEach(plants) { plant in
-                                      NavigationLink(destination: PlantVIew(plant: plant)) {
+                                      NavigationLink(destination:PlantView(plant: plant, namespace: navNamespace)
+                                        .navigationTransition(.zoom(sourceID: plant.id, in:navNamespace))
+                                      ) {
                                           PlantCardView(plant: plant)
+                                              .matchedGeometryEffect(id: plant.id, in: navNamespace)
                                       }
                                       .buttonStyle(.plain)
                                   }

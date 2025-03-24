@@ -8,16 +8,15 @@
 
 import SwiftUI
 
-struct PlantVIew: View {
+struct PlantView: View {
     let plant: Plant
+    var namespace: Namespace.ID
     @State var growthRecords: [GrowthRecord] = []
     @State var waterRecords: [WaterRecord] = []
     @State var unitMap: [Int: UnitOfMeasure] = [:] // map UOM id to object
     @State private var showingWaterForm = false
     @State private var waterSuccessBanner: String?
     @State private var showingWaterEditSheet = false
-    
-    
     
     var body: some View {
         ZStack {
@@ -257,5 +256,6 @@ struct PlantVIew: View {
 
 #Preview {
     let testPlant: Plant = Plant(id: 1, name: "Test Plant", species: "Test Species", userID: 1)
-    PlantVIew(plant: testPlant)
+    let dm = Namespace().wrappedValue
+    PlantView(plant: testPlant, namespace: dm)
 }
