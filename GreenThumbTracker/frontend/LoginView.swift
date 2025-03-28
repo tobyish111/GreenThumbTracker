@@ -32,13 +32,14 @@ struct LoginView: View {
                            .shadow(color: .green, radius: 5)
 
                        VStack(spacing: 10) {
-                           Text("Welcome to")
+                           Text("Welcome to the")
                                .font(.title2)
 
                            Text("GreenThumbTracker")
                                .font(.largeTitle)
                                .fontWeight(.bold)
                                .foregroundStyle(.green)
+                               .padding()
 
                            Text("Please login to continue.")
                                .font(.body)

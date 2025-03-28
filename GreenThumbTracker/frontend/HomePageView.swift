@@ -86,7 +86,7 @@ struct HomePageView: View {
       }
   }
 
-  // MARK: - Reusable Navigation Button
+  //reusable nav button
   struct HomeNavLink<Destination: View>: View {
       var title: String
       var systemImage: String

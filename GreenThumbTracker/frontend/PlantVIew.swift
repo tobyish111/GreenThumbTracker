@@ -17,6 +17,8 @@ struct PlantView: View {
     @State private var showingWaterForm = false
     @State private var waterSuccessBanner: String?
     @State private var showingWaterEditSheet = false
+    @State private var showingEditSheet = false
+
     
     var body: some View {
         ZStack {
@@ -26,16 +28,31 @@ struct PlantView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
             ScrollView {
                 VStack(spacing: 24) {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showingEditSheet = true
+                        }) {
+                            Image(systemName: "square.and.pencil")
+                                .foregroundColor(.green)
+                                .padding()
+                                .background(Color.white.opacity(0.8))
+                                .clipShape(Circle())
+                                .shadow(radius: 3)
+                        }
+                    }//end hstack
+                    .padding(.top, 10)
+                    .padding(.trailing)
+
                     Image(systemName: "leaf.circle.fill")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 120, height: 120)
                         .foregroundColor(.green)
                         .shadow(color: .green.opacity(0.5), radius: 8, x: 0, y: 4)
-                        .padding(.top, 80)
+                        .padding(.top, 20)
                     
                     //confirmation message
                     if let message = waterSuccessBanner {
@@ -106,17 +123,22 @@ struct PlantView: View {
                             }){
                                 Image(systemName: "arrow.clockwise")
                                     .foregroundColor(.blue)
-                            }
+                            }.offset(x: -35)
                             .buttonStyle(.borderless)
                             .help("Refresh Data")
                             Spacer()
-                            Text("Entries: \(waterRecords.count)")
-                                .font(.subheadline)
-                                .foregroundColor(.black)
+                            //place add water button here!!!
+                            Button(action: {
+                                showingWaterForm = true
+                            }) {
+                                
+                                Image(systemName: "plus")
+                            }
                             Spacer()
                             Button {
                                 showingWaterEditSheet = true
                             } label: {
+                                Text("Edit")
                                 Image(systemName: "square.and.pencil")
                                     .foregroundColor(.blue)
                             }
@@ -136,6 +158,11 @@ struct PlantView: View {
                             Text("Date")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
+                            Spacer()
+                            Text("Entries: \(waterRecords.count)")
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                                .padding(.leading)
                             Spacer()
                             Text("Amount")
                                 .font(.subheadline)
@@ -222,13 +249,17 @@ struct PlantView: View {
                 loadGrowthData()
                 loadWaterData()
             }
+        }//end zstack
+        .sheet(isPresented: $showingEditSheet) {
+            AddPlantView(existingPlant: plant)
         }
+
     }
     //loading methods for the UI
     func loadGrowthData() {
         // TODO: API call to populate growthRecords
     }
-
+    //read water record
     func loadWaterData() {
         APIManager.shared.fetchWaterRecords(forPlantId: plant.id) { result in
             DispatchQueue.main.async {

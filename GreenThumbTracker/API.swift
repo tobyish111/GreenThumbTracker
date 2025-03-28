@@ -9,7 +9,7 @@ import Foundation
 //function to call to any endpoint from our db api!
 class APIManager {
     static let shared = APIManager() //singleton instance
-    private let baseURL = "http://192.168.1.42:8800/api" //when we go live update this when deployed to the prod url
+    private let baseURL = "https://www.greenthumbtracker.org/" //when we go live update this when deployed to the prod url
     
     //generic functiosn for sending requests
     private func request<T: Decodable>(endpoint: String, method: String = "GET", body: Data? = nil, completion: @escaping (Result<T, Error>) -> Void){
@@ -78,6 +78,44 @@ extension APIManager {
     func fetchPlants(completion: @escaping (Result<[Plant], Error>) -> Void){
         request(endpoint: "/plants", completion: completion)
     }
+    //update a plant (edit)
+    func updatePlant(id: Int, name: String, species: String, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/plants/\(id)"
+        let body: [String: Any] = [
+            "name": name,
+            "species": species
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            print("Failed to encode JSON")
+            return
+        }
+
+        request(endpoint: endpoint, method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                let message = response["message"] ?? "Plant updated!"
+                completion(.success(message))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    //delete plant
+    func deletePlant(id: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/plants/\(id)"
+        
+        request(endpoint: endpoint, method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Plant deleted successfully!"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+
     
     //WATER RECORD METHODS
     //create water record
