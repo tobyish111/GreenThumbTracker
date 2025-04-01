@@ -247,7 +247,6 @@ struct PlantCardView: View {
                             .clipShape(Circle())
                     }
                 }
-
                 if let onDelete = onDelete {
                     Button(action: onDelete) {
                         Image(systemName: "trash")

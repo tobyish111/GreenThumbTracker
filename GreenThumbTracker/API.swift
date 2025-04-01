@@ -9,7 +9,8 @@ import Foundation
 //function to call to any endpoint from our db api!
 class APIManager {
     static let shared = APIManager() //singleton instance
-    private let baseURL = "https://www.greenthumbtracker.org/" //when we go live update this when deployed to the prod url
+    private let baseURL = "http://localhost:8800/api"         //dev endpoint
+    //private let baseURL = "https://greenthumbtracker.org/api" //prod endpoint (aws)
     
     //generic functiosn for sending requests
     private func request<T: Decodable>(endpoint: String, method: String = "GET", body: Data? = nil, completion: @escaping (Result<T, Error>) -> Void){
@@ -32,6 +33,7 @@ class APIManager {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let data = data{
+                print("📦 Raw response: \(String(data: data, encoding: .utf8) ?? "Unreadable")")
                 do {
                     let decodedData = try JSONDecoder().decode(T.self, from: data)
                     DispatchQueue.main.async{
@@ -178,7 +180,7 @@ extension APIManager {
     
     //login function for user
     func login(username: String, password: String, completion: @escaping (Result<LoginResponse, Error>) -> Void) {
-            let endpoint = "/auth/login"
+            let endpoint = "/api/auth/login"
             let body = ["username": username, "password": password]
 
             guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
