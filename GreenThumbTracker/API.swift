@@ -32,6 +32,14 @@ class APIManager {
         }
         
         URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                   print("❌ Network error: \(error.localizedDescription)")
+                   DispatchQueue.main.async {
+                       completion(.failure(error))
+                   }
+                   return
+               }
+
             if let data = data{
                 print("📦 Raw response: \(String(data: data, encoding: .utf8) ?? "Unreadable")")
                 do {
@@ -180,7 +188,7 @@ extension APIManager {
     
     //login function for user
     func login(username: String, password: String, completion: @escaping (Result<LoginResponse, Error>) -> Void) {
-            let endpoint = "/api/auth/login"
+            let endpoint = "/auth/login"
             let body = ["username": username, "password": password]
 
             guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }

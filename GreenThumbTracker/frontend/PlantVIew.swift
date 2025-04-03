@@ -150,7 +150,8 @@ struct PlantView: View {
                                 plant: plant,
                                 waterRecords: $waterRecords,
                                 unitMap: unitMap,
-                                refreshData: loadWaterData
+                                refreshData: loadWaterData,
+                                deleteWaterRecord: deleteWaterRecord
                             )
                         }
                         //Column Headers
