@@ -66,11 +66,11 @@ struct HomePageView: View {
                       }
                       .padding(.top, 40)
 
-                      // 🌿 Main Menu Buttons
+                      //Main Menu Buttons
                       VStack(spacing: 20) {
                           HomeNavLink(title: "Add a Plant", systemImage: "plus.circle", destination: AddPlantView(), namespace: navNamespace)
                           HomeNavLink(title: "View My Plants", systemImage: "leaf", destination: ViewPlantsView(), namespace: navNamespace)
-                          //HomeNavLink(title: "Delete a Plant", systemImage: "trash.fill", destination: DeletePlantView())
+                          HomeNavLink(title: "Encyclopedia", systemImage: "book", destination: EncyclopediaView(), namespace: navNamespace)
                       }
 
                       Spacer()
