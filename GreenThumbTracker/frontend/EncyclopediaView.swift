@@ -41,9 +41,9 @@ struct EncyclopediaView: View {
                            .padding()
                    } else {
                        ScrollView {
-                                              LazyVStack(spacing: 12) {
-                                                  ForEach(filteredPlants) { plant in
-                                                      NavigationLink(destination: TreflePlantView(plant: plant)) {
+                                LazyVStack(spacing: 12) {
+                                    ForEach(filteredPlants) { plant in
+                                        NavigationLink(destination: TreflePlantView(plant: plant)) {
                                                           HStack(spacing: 12) {
                                                               AsyncImage(url: URL(string: plant.image_url ?? "")) { phase in
                                                                   switch phase {

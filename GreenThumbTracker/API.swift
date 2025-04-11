@@ -184,7 +184,67 @@ extension APIManager {
         }
     }
 
+    /*
+     Growth Record crud operations
+     */
 
+    func fetchGrowthRecords(forPlantId plantId: Int, completion: @escaping (Result<[GrowthRecord], Error>) -> Void) {
+        let endpoint = "/growth/\(plantId)"
+        request(endpoint: endpoint, completion: completion)
+    }
+
+    func createGrowthRecord(plantId: Int, height: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/growth/\(plantId)"
+        let body: [String: Any] = [
+            "height": height,
+            "date": date,
+            "uomId": uomID
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+        
+        request(endpoint: endpoint, method: "POST", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Success"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func updateGrowthRecord(plantId: Int, recordId: Int, height: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/growth/\(plantId)/\(recordId)"
+        let body: [String: Any] = [
+            "height": height,
+            "date": date,
+            "uomId": uomID
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+        
+        request(endpoint: endpoint, method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Updated"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func deleteGrowthRecord(plantId: Int, recordId: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/growth/\(plantId)/\(recordId)"
+        request(endpoint: endpoint, method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Deleted"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+//end growth record operations
     
     //login function for user
     func login(username: String, password: String, completion: @escaping (Result<LoginResponse, Error>) -> Void) {

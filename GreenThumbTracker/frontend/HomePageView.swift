@@ -46,7 +46,7 @@ struct HomePageView: View {
                   .ignoresSafeArea()
 
                   VStack(spacing: 30) {
-                      // 🌱 Header
+                      //Header
                       VStack(spacing: 8) {
                           Image(systemName: "leaf.fill")
                               .resizable()

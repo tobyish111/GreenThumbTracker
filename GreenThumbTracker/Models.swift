@@ -61,12 +61,24 @@ struct WaterRecord: Codable, Identifiable{
 }
 
 //growth record
-struct GrowthRecord: Codable, Identifiable {
+struct GrowthRecord: Identifiable, Codable {
     let id: Int
-    let plantId: Int
     let height: Double
     let date: String
-    let uomID: Int
+    let plant: NestedPlant
+    let uom: NestedUOM
+    
+    struct NestedPlant: Codable {
+        let id: Int
+        let name: String
+        let species: String
+    }
+
+    struct NestedUOM: Codable {
+        let id: Int
+        let name: String
+        let symbol: String
+    }
 }
 
 //unit of measure table

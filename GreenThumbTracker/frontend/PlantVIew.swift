@@ -18,12 +18,17 @@ struct PlantView: View {
     @State private var waterSuccessBanner: String?
     @State private var showingWaterEditSheet = false
     @State private var showingEditSheet = false
+    @State private var growthSuccessBanner: String?
+    @State private var showingGrowthForm = false
+    @State private var showingGrowthEditSheet = false
+    @State private var showWaterChart = false
+
 
     
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [.zenGreen.opacity(0.8), .zenBeige.opacity(0.6), .green.opacity(0.7)],
+                colors: [.zenGreen.opacity(0.9), .zenBeige.opacity(0.5), .green.opacity(0.8)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -89,30 +94,127 @@ struct PlantView: View {
                     .shadow(radius: 4)
                     
                     //Latest Growth
-                    if let latestGrowth = growthRecords.sorted(by: { $0.date > $1.date }).first {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("Latest Growth", systemImage: "leaf")
+                    // Growth Log Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Label("Growth Records", systemImage: "arrow.up.right.circle.fill")
                                 .font(.headline)
                                 .foregroundColor(.green)
-                            
-                            Text("\(latestGrowth.height, specifier: "%.2f") \(unitMap[latestGrowth.uomID]?.symbol ?? "")")
-                                .font(.title2)
-                                .bold()
-                            
-                            Text("on \(latestGrowth.date)")
-                                .font(.caption)
+                            Spacer()
+
+                            Button(action: {
+                                loadGrowthData()
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.green)
+                            }.offset(x: -35)
+                            .buttonStyle(.borderless)
+                            .help("Refresh Data")
+
+                            Spacer()
+
+                            Button(action: {
+                                showingGrowthForm = true
+                            }) {
+                                Text("Add")
+                                    .foregroundColor(.green)
+                                Image(systemName: "plus")
+                                    .foregroundColor(.green)
+                            }
+                            .sheet(isPresented: $showingGrowthForm) {
+                                AddGrowthSheetView(
+                                    plant: plant,
+                                    onSubmit: {
+                                        showingGrowthForm = false
+                                        loadGrowthData()
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                            withAnimation {
+                                                growthSuccessBanner = "Growth record added!"
+                                            }
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                                withAnimation {
+                                                    growthSuccessBanner = nil
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
+
+                            Spacer()
+
+                            Button {
+                                showingGrowthEditSheet = true
+                            } label: {
+                                Text("Edit")
+                                    .foregroundColor(.green)
+                                Image(systemName: "square.and.pencil")
+                                    .foregroundColor(.green)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Edit")
+                        }
+                        .sheet(isPresented: $showingGrowthEditSheet) {
+                            GrowthRecordEditView(
+                                plant: plant,
+                                growthRecords: $growthRecords,
+                                unitMap: unitMap,
+                                refreshData: loadGrowthData,
+                                deleteGrowthRecord: deleteGrowthRecord
+                            )
+                        }
+
+                        HStack {
+                            Text("Date")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Text("Entries: \(growthRecords.count)")
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                                .padding(.leading)
+                            Spacer()
+                            Text("Height")
+                                .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
-                        .padding()
-                        .background(Color.white.opacity(0.9))
-                        .cornerRadius(12)
-                        .shadow(radius: 4)
+
+                        if growthRecords.isEmpty {
+                            Text("...No growth records yet...")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(growthRecords.sorted(by: { $0.date > $1.date })) { record in
+                                        HStack {
+                                            Text(formattedDate(record.date))
+                                                .font(.subheadline)
+                                            Spacer()
+                                            Text("\(record.height, specifier: "%.2f") \(unitMap[record.uom.id]?.symbol ?? "")")
+                                                .font(.subheadline)
+                                                .foregroundColor(.black)
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .frame(maxHeight: 200)
+                        }
                     }
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
+                    //end growth log section
+                    
                     //Watering Log Section
                     VStack(alignment: .leading, spacing: 12) {
                         //Section Title with total entries
                         //chart headers
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             Label("Watering Records", systemImage: "drop.fill")
                                 .font(.headline)
                                 .foregroundColor(.blue)
@@ -131,7 +233,7 @@ struct PlantView: View {
                             Button(action: {
                                 showingWaterForm = true
                             }) {
-                                
+                                Text("Add")
                                 Image(systemName: "plus")
                             }
                             Spacer()
@@ -192,8 +294,32 @@ struct PlantView: View {
                                     }
                                 }
                                 .padding(.top, 4)
-                            }
+                            }//end water scroll view
                             .frame(maxHeight: 200)
+                            .overlay(alignment: .bottom) {
+                                Button(action: {
+                                    // trigger navigation to chart view
+                                    showWaterChart = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                        Text("View Water Chart")
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.blue.opacity(0.85))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                    .shadow(radius: 5)
+                                    .padding()
+                                }
+                                .fullScreenCover(isPresented: $showWaterChart) {
+                                    NavigationView {
+                                        WaterChartView(waterRecords: waterRecords, unitMap: unitMap)
+                                    }
+                                }
+                            }
+
                         }
                     }
                     .padding()
@@ -258,8 +384,29 @@ struct PlantView: View {
     }
     //loading methods for the UI
     func loadGrowthData() {
-        // TODO: API call to populate growthRecords
+        APIManager.shared.fetchGrowthRecords(forPlantId: plant.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let records):
+                    self.growthRecords = records
+                case .failure(let error):
+                    print("Failed to load growth records: \(error.localizedDescription)")
+                }
+            }
+        }
     }
+
+    func deleteGrowthRecord(plantId: Int, recordId: Int) {
+        APIManager.shared.deleteGrowthRecord(plantId: plantId, recordId: recordId) { result in
+            switch result {
+            case .success:
+                loadGrowthData()
+            case .failure(let error):
+                print("Failed to delete growth record:", error.localizedDescription)
+            }
+        }
+    }
+
     //read water record
     func loadWaterData() {
         APIManager.shared.fetchWaterRecords(forPlantId: plant.id) { result in
