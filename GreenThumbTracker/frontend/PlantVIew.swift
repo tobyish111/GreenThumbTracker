@@ -296,30 +296,27 @@ struct PlantView: View {
                                 .padding(.top, 4)
                             }//end water scroll view
                             .frame(maxHeight: 200)
-                            .overlay(alignment: .bottom) {
-                                Button(action: {
-                                    // trigger navigation to chart view
-                                    showWaterChart = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "chart.line.uptrend.xyaxis")
-                                        Text("View Water Chart")
-                                    }
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.blue.opacity(0.85))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                    .shadow(radius: 5)
-                                    .padding()
+                            
+                            Button(action: {
+                                // trigger navigation to chart view
+                                showWaterChart = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                    Text("View Water Chart")
                                 }
-                                .fullScreenCover(isPresented: $showWaterChart) {
-                                    NavigationView {
-                                        WaterChartView(waterRecords: waterRecords, unitMap: unitMap)
-                                    }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.blue.opacity(0.85))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                            }
+                            .fullScreenCover(isPresented: $showWaterChart) {
+                                NavigationView {
+                                    WaterChartView(waterRecords: waterRecords, unitMap: unitMap)
                                 }
                             }
-
                         }
                     }
                     .padding()
