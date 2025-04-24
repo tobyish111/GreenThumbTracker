@@ -12,7 +12,6 @@ struct LoginView: View {
        @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
 
        var body: some View {
-           NavigationStack {
                ZStack {
                    LinearGradient(
                        colors: [.zenGreen.opacity(0.8), .zenBeige.opacity(0.6), .green.opacity(0.7)],
@@ -64,10 +63,7 @@ struct LoginView: View {
                    }
                    .padding(.horizontal, 32)
                }
-               .navigationDestination(isPresented: $isLoggedIn) {
-                   HomePageView()
-               }
-           }
+               
        }
    }
 
@@ -152,7 +148,9 @@ struct LoginFormView: View {
                                    print("Login succeeded:", loginResponse)
                                    authToken = loginResponse.token
                                    showingLoginForm = false
-                                   isLoggedIn = true
+                                   withAnimation(.easeInOut(duration: 0.6)){
+                                       isLoggedIn = true
+                                   }
                                case .failure(let error):
                                    print("Login failed:", error)
                                    errorMessage = "Invalid username or password"

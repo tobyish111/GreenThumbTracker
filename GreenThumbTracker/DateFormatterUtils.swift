@@ -25,4 +25,11 @@ public func formattedDate(_ rawDate: String) -> String {
     }
 }
 
+public func timestampFromISODate(_ rawDate: String) -> TimeInterval? {
+    let isoFormatter = ISO8601DateFormatter()
+    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return isoFormatter.date(from: rawDate)?.timeIntervalSince1970
+}
+
+
 

@@ -21,10 +21,28 @@ struct PlantView: View {
     @State private var growthSuccessBanner: String?
     @State private var showingGrowthForm = false
     @State private var showingGrowthEditSheet = false
+    @State private var showGrowthChart = false
     @State private var showWaterChart = false
-
-
+    @State private var humidityRecords: [HumidityRecord] = []
+    @State private var showingHumidityEditSheet = false
+    @State private var showingHumidityForm = false
+    @State private var showHumidityChart = false
+    @State private var lightRecords: [LightRecord] = []
+    @State private var showingLightForm = false
+    @State private var showingLightEditSheet = false
+    @State private var showLightChart = false
+    @State private var soilMoistureRecords: [SoilMoistureRecord] = []
+    @State private var showingSoilMoistureForm = false
+    @State private var showingSoilMoistureEditSheet = false
+    @State private var showSoilMoistureChart = false
+    @State private var temperatureRecords: [TemperatureRecord] = []
+    @State private var showingTemperatureForm = false
+    @State private var showingTemperatureEditSheet = false
+    @State private var showTemperatureChart = false
+    @State private var showMultiTrendChart = false
     
+
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -203,6 +221,26 @@ struct PlantView: View {
                             }
                             .frame(maxHeight: 200)
                         }
+                        Button(action: {
+                            showGrowthChart = true
+                        }) {
+                            HStack {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                Text("View Growth Chart")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.green.opacity(0.85))
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .shadow(radius: 5)
+                        }
+                        .fullScreenCover(isPresented: $showGrowthChart) {
+                            NavigationView {
+                                GrowthChartView(growthRecords: growthRecords, unitMap: unitMap)
+                            }
+                        }
+
                     }
                     .padding()
                     .background(Color.white.opacity(0.9))
@@ -325,53 +363,510 @@ struct PlantView: View {
                     .shadow(radius: 4)
                     //end water records
                     
-                    
-                    //Action Buttons
-                    HStack(spacing: 20) {
-                        Button(action: {
-                            //Show growth input form
-                        }) {
-                            Label("Add Growth", systemImage: "plus")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        //add water record button
-                        Button(action: {
-                            showingWaterForm = true
-                        }) {
-                            Label("Add Water Record", systemImage: "plus")
-                        }
-                        .buttonStyle(.bordered)
-                        .sheet(isPresented: $showingWaterForm) {
-                            AddWaterSheet(
-                                plant: plant,
-                                onSubmit: {
-                                    showingWaterForm = false
-                                    loadWaterData()
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                                        withAnimation {
-                                            waterSuccessBanner = "Water record added!"
-                                        }
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            withAnimation {
-                                                waterSuccessBanner = nil
+                    //humidity records
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Label("Humidity Records", systemImage: "humidity.fill")
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Button(action: {
+                                loadHumidityData()
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.orange)
+                            }.offset(x: -35)
+                            .buttonStyle(.borderless)
+
+                            Spacer()
+                                Button(action: {
+                                    showingHumidityForm = true
+                                }) {
+                                    Text("Add")
+                                        .foregroundColor(.orange)
+                                    Image(systemName: "plus")
+                                        .foregroundColor(.orange)
+                                }.sheet(isPresented: $showingHumidityForm) {
+                                    AddHumiditySheetView(
+                                        plant: plant,
+                                        onSubmit: {
+                                            showingHumidityForm = false
+                                            loadHumidityData()
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                                withAnimation {
+                                                    // You can optionally set a success banner message here
+                                                }
                                             }
                                         }
-                                    }
+                                    )
                                 }
+                            Spacer()
+                            Button {
+                                showingHumidityEditSheet = true
+                            } label: {
+                                Text("Edit")
+                                    .foregroundColor(.orange)
+                                Image(systemName: "square.and.pencil")
+                                    .foregroundColor(.orange)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        .sheet(isPresented: $showingHumidityEditSheet) {
+                            HumidityRecordEditView(
+                                plant: plant,
+                                humidityRecords: $humidityRecords,
+                                refreshData: loadHumidityData,
+                                deleteHumidityRecord: deleteHumidityRecord
                             )
                         }
 
-                    }//end hstack
-                    .padding(.top)
+                        HStack {
+                            Text("Date")
+                            Spacer()
+                            Text("Entries: \(humidityRecords.count)")
+                            Spacer()
+                            Text("Humidity %")
+                        }.font(.subheadline).foregroundColor(.gray)
+
+                        if humidityRecords.isEmpty {
+                            Text("...No humidity records yet...")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(humidityRecords.sorted(by: { $0.date > $1.date })) { record in
+                                        HStack {
+                                            Text(formattedDate(record.date))
+                                            Spacer()
+                                            Text("\(record.humidity, specifier: "%.1f")%")
+                                                .foregroundColor(.black)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.vertical, 4)
+                                    }
+                                }.padding(.top, 4)
+                            }
+                            .frame(maxHeight: 200)
+
+                            Button(action: {
+                                showHumidityChart = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                    Text("View Humidity Chart")
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.orange.opacity(0.85))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                            }
+                            .fullScreenCover(isPresented: $showHumidityChart) {
+                                NavigationView {
+                                    HumidityChartView(humidityRecords: humidityRecords)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
+
+                    //light records
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Label("Light Records", systemImage: "sun.max.fill")
+                                .font(.headline)
+                                .foregroundColor(.yellow)
+
+                            Spacer()
+
+                            Button(action: {
+                                loadLightData()
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.yellow)
+                            }
+                            .offset(x: -35)
+                            .buttonStyle(.borderless)
+
+                            Spacer()
+
+                            Button(action: {
+                                showingLightForm = true
+                            }) {
+                                Text("Add")
+                                    .foregroundColor(.yellow)
+                                Image(systemName: "plus")
+                                    .foregroundColor(.yellow)
+                            }
+                            .sheet(isPresented: $showingLightForm) {
+                                AddLightSheet(
+                                    plant: plant,
+                                    onSubmit: {
+                                        showingLightForm = false
+                                        loadLightData()
+                                    }
+                                )
+                            }
+
+                            Spacer()
+
+                            Button {
+                                showingLightEditSheet = true
+                            } label: {
+                                Text("Edit")
+                                    .foregroundColor(.yellow)
+                                Image(systemName: "square.and.pencil")
+                                    .foregroundColor(.yellow)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Edit")
+                        }
+
+                        .sheet(isPresented: $showingLightEditSheet) {
+                            LightRecordEditView(
+                                plant: plant,
+                                lightRecords: $lightRecords,
+                                refreshData: loadLightData,
+                                deleteLightRecord: deleteLightRecord
+                            )
+                        }
+
+                        HStack {
+                            Text("Date")
+                            Spacer()
+                            Text("Entries: \(lightRecords.count)")
+                            Spacer()
+                            Text("Light")
+                        }.font(.subheadline).foregroundColor(.gray)
+
+                        if lightRecords.isEmpty {
+                            Text("...No light records yet...")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(lightRecords.sorted(by: { $0.date > $1.date })) { record in
+                                        HStack {
+                                            Text(formattedDate(record.date))
+                                            Spacer()
+                                            Text("\(record.light, specifier: "%.1f")")
+                                                .foregroundColor(.black)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .frame(maxHeight: 200)
+
+                            Button(action: {
+                                showLightChart = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                    Text("View Light Chart")
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.yellow.opacity(0.85))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                            }
+                            .fullScreenCover(isPresented: $showLightChart) {
+                                NavigationView {
+                                    LightRecordChartView(lightRecords: lightRecords)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
                     
+                    //soil records
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Label("Soil Moisture Records", systemImage: "drop.triangle.fill")
+                                .font(.headline)
+                                .foregroundColor(.brown)
+
+                            Spacer()
+
+                            Button(action: {
+                                loadSoilMoistureData()
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.brown)
+                            }
+                            .offset(x: -35)
+                            .buttonStyle(.borderless)
+
+                            Spacer()
+
+                            Button(action: {
+                                showingSoilMoistureForm = true
+                            }) {
+                                Text("Add")
+                                    .foregroundColor(.brown)
+                                Image(systemName: "plus")
+                                    .foregroundColor(.brown)
+                            }
+                            .sheet(isPresented: $showingSoilMoistureForm) {
+                                AddSoilMoistureSheet(
+                                    plant: plant,
+                                    onSubmit: {
+                                        showingSoilMoistureForm = false
+                                        loadSoilMoistureData()
+                                    }
+                                )
+                            }
+
+                            Spacer()
+
+                            Button {
+                                showingSoilMoistureEditSheet = true
+                            } label: {
+                                Text("Edit")
+                                    .foregroundColor(.brown)
+                                Image(systemName: "square.and.pencil")
+                                    .foregroundColor(.brown)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+
+                        .sheet(isPresented: $showingSoilMoistureEditSheet) {
+                            SoilMoistureRecordEditView(
+                                plant: plant,
+                                soilMoistureRecords: $soilMoistureRecords,
+                                refreshData: loadSoilMoistureData,
+                                deleteSoilMoistureRecord: deleteSoilMoistureRecord
+                            )
+                        }
+
+                        HStack {
+                            Text("Date")
+                            Spacer()
+                            Text("Entries: \(soilMoistureRecords.count)")
+                            Spacer()
+                            Text("Moisture")
+                        }.font(.subheadline).foregroundColor(.gray)
+
+                        if soilMoistureRecords.isEmpty {
+                            Text("...No soil moisture records yet...")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(soilMoistureRecords.sorted(by: { $0.date > $1.date })) { record in
+                                        HStack {
+                                            Text(formattedDate(record.date))
+                                            Spacer()
+                                            Text("\(record.soil_moisture, specifier: "%.1f")")
+                                                .foregroundColor(.black)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .frame(maxHeight: 200)
+
+                            Button(action: {
+                                showSoilMoistureChart = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                    Text("View Moisture Chart")
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.brown.opacity(0.85))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                            }
+                            .fullScreenCover(isPresented: $showSoilMoistureChart) {
+                                NavigationView {
+                                    SoilMoistureChartView(soilMoistureRecords: soilMoistureRecords)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
+
+                    //temp records
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Label("Temperature Records", systemImage: "thermometer.sun.fill")
+                                .font(.headline)
+                                .foregroundColor(.red)
+
+                            Spacer()
+
+                            Button(action: {
+                                loadTemperatureData()
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.red)
+                            }
+                            .offset(x: -35)
+                            .buttonStyle(.borderless)
+
+                            Button(action: {
+                                showingTemperatureForm = true
+                            }) {
+                                Text("Add")
+                                    .foregroundColor(.red)
+                                Image(systemName: "plus")
+                                    .foregroundColor(.red)
+                            }
+                            .sheet(isPresented: $showingTemperatureForm) {
+                                AddTemperatureSheet(
+                                    plant: plant,
+                                    onSubmit: {
+                                        showingTemperatureForm = false
+                                        loadTemperatureData()
+                                    }
+                                )
+                            }
+
+                            Spacer()
+
+                            Button {
+                                showingTemperatureEditSheet = true
+                            } label: {
+                                Text("Edit")
+                                    .foregroundColor(.red)
+                                Image(systemName: "square.and.pencil")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+
+                        .sheet(isPresented: $showingTemperatureEditSheet) {
+                            TemperatureRecordEditView(
+                                plant: plant,
+                                temperatureRecords: $temperatureRecords,
+                                refreshData: loadTemperatureData,
+                                deleteTemperatureRecord: deleteTemperatureRecord
+                            )
+                        }
+
+                        HStack {
+                            Text("Date")
+                            Spacer()
+                            Text("Entries: \(temperatureRecords.count)")
+                            Spacer()
+                            Text("Temp")
+                        }.font(.subheadline).foregroundColor(.gray)
+
+                        if temperatureRecords.isEmpty {
+                            Text("...No temperature records yet...")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(temperatureRecords.sorted(by: { $0.date > $1.date })) { record in
+                                        HStack {
+                                            Text(formattedDate(record.date))
+                                            Spacer()
+                                            Text("\(record.temperature, specifier: "%.1f")°")
+                                                .foregroundColor(.black)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .frame(maxHeight: 200)
+
+                            Button(action: {
+                                showTemperatureChart = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                    Text("View Temp Chart")
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.red.opacity(0.85))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .shadow(radius: 5)
+                            }
+                            .fullScreenCover(isPresented: $showTemperatureChart) {
+                                NavigationView {
+                                    TemperatureChartView(temperatureRecords: temperatureRecords)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.9))
+                    .cornerRadius(12)
+                    .shadow(radius: 4)
+                    // Multi-Record Trend Button
+                    VStack(spacing: 12) {
+                        Button(action: {
+                            showMultiTrendChart = true
+                            print("📊 Navigating to MultiRecordTrendView")
+
+                        }) {
+                            HStack {
+                                Image(systemName: "waveform.path.ecg.rectangle")
+                                Text("Compare Multiple Trends")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.purple.opacity(0.85))
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .shadow(radius: 5)
+                        }
+                        .fullScreenCover(isPresented: $showMultiTrendChart) {
+                            NavigationView {
+                                MultiRecordTrendView(
+                                    plant: plant,
+                                    growthRecords: growthRecords,
+                                    waterRecords: waterRecords,
+                                    humidityRecords: humidityRecords,
+                                    lightRecords: lightRecords,
+                                    soilMoistureRecords: soilMoistureRecords,
+                                    temperatureRecords: temperatureRecords,
+                                    unitMap: unitMap
+                                )
+                            }
+                        }
+                    }
+
                     Spacer()
-                }
+                }//end main vstack
                 .padding()
             }
             .navigationTitle("Plant Details")
             .onAppear {
                 loadGrowthData()
                 loadWaterData()
+                loadHumidityData()
+                loadLightData()
+                loadSoilMoistureData()
+                loadTemperatureData()
             }
         }//end zstack
         .sheet(isPresented: $showingEditSheet) {
@@ -379,6 +874,107 @@ struct PlantView: View {
         }
 
     }
+    // MARK: - Temperature Record Operations
+    func loadTemperatureData() {
+        APIManager.shared.fetchTemperatureRecords(forPlantId: plant.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let records):
+                    self.temperatureRecords = records
+                case .failure(let error):
+                    print("❌ Failed to load temperature records: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func deleteTemperatureRecord(plantId: Int, recordId: Int) {
+        APIManager.shared.deleteTemperatureRecord(plantId: plantId, recordId: recordId) { result in
+            switch result {
+            case .success:
+                loadTemperatureData()
+            case .failure(let error):
+                print("❌ Failed to delete temperature record: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    //MARK: Soil methods
+    func loadSoilMoistureData() {
+        APIManager.shared.fetchSoilMoistureRecords(forPlantId: plant.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let records):
+                    self.soilMoistureRecords = records
+                case .failure(let error):
+                    print("❌ Failed to load soil moisture records: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func deleteSoilMoistureRecord(plantId: Int, recordId: Int) {
+        APIManager.shared.deleteSoilMoistureRecord(plantId: plantId, recordId: recordId) { result in
+            switch result {
+            case .success:
+                loadSoilMoistureData()
+            case .failure(let error):
+                print("❌ Failed to delete soil moisture record: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Light Record Operations
+    func loadLightData() {
+        APIManager.shared.fetchLightRecords(forPlantId: plant.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let records):
+                    self.lightRecords = records
+                case .failure(let error):
+                    print("❌ Failed to load light records: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func deleteLightRecord(plantId: Int, recordId: Int) {
+        APIManager.shared.deleteLightRecord(plantId: plantId, recordId: recordId) { result in
+            switch result {
+            case .success:
+                loadLightData()
+            case .failure(let error):
+                print("❌ Failed to delete light record: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Humidity Record Operations
+    func loadHumidityData() {
+        APIManager.shared.fetchHumidityRecords(forPlantId: plant.id) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let records):
+                    self.humidityRecords = records
+                case .failure(let error):
+                    print("❌ Failed to load humidity records: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func deleteHumidityRecord(plantId: Int, recordId: Int) {
+        APIManager.shared.deleteHumidityRecord(plantId: plantId, recordId: recordId) { result in
+            switch result {
+            case .success:
+                loadHumidityData()
+            case .failure(let error):
+                print("❌ Failed to delete humidity record: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    //MARK: - Growth Record Operations
     //loading methods for the UI
     func loadGrowthData() {
         APIManager.shared.fetchGrowthRecords(forPlantId: plant.id) { result in
@@ -403,7 +999,7 @@ struct PlantView: View {
             }
         }
     }
-
+    //MARK: Water Record Operations
     //read water record
     func loadWaterData() {
         APIManager.shared.fetchWaterRecords(forPlantId: plant.id) { result in

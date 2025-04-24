@@ -9,7 +9,7 @@ import Foundation
 //function to call to any endpoint from our db api!
 class APIManager {
     static let shared = APIManager() //singleton instance
-    private let baseURL = "http://localhost:8800/api"         //dev endpoint
+    private let baseURL = "http://192.168.1.11:8800/api"         //dev endpoint
     //private let baseURL = "https://greenthumbtracker.org/api" //prod endpoint (aws)
     
     //generic functiosn for sending requests
@@ -128,10 +128,11 @@ extension APIManager {
 
     
     //WATER RECORD METHODS
+    //MARK: Water Record operations
     //create water record
     func createWaterRecord(plantId: Int, amount: Int, date: String, completion: @escaping (Result<String, Error>) -> Void){
         let endpoint = "/water/\(plantId)"
-        let body = ["waterAmount": amount, "waterDate": date] as [String : Any]
+        let body = ["amount": amount, "date": date] as [String : Any]
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {return}
         
@@ -154,8 +155,8 @@ extension APIManager {
     func updateWaterRecord(plantId: Int, recordId: Int, amount: Int, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
         let endpoint = "/water/\(plantId)/\(recordId)"
         let body: [String: Any] = [
-            "waterAmount": amount,
-            "waterDate": date,
+            "amount": amount,
+            "date": date,
             "uomId": uomID
         ]
         
@@ -187,7 +188,7 @@ extension APIManager {
     /*
      Growth Record crud operations
      */
-
+    //MARK: Growth Operations
     func fetchGrowthRecords(forPlantId plantId: Int, completion: @escaping (Result<[GrowthRecord], Error>) -> Void) {
         let endpoint = "/growth/\(plantId)"
         request(endpoint: endpoint, completion: completion)
@@ -245,7 +246,224 @@ extension APIManager {
         }
     }
 //end growth record operations
+    //MARK: - Humidity Record CRUD
+    func fetchHumidityRecords(forPlantId plantId: Int, completion: @escaping (Result<[HumidityRecord], Error>) -> Void) {
+        request(endpoint: "/humidity/\(plantId)", completion: completion)
+    }
+
+    func createHumidityRecord(plantId: Int, humidity: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/humidity/\(plantId)"
+        let body: [String: Any] = [
+            "humidity": humidity,
+            "date": date,
+            "uomId": uomID
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: endpoint, method: "POST", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Humidity record created"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func updateHumidityRecord(plantId: Int, recordId: Int, humidity: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/humidity/\(plantId)/\(recordId)"
+        let body: [String: Any] = [
+            "humidity": humidity,
+            "date": date,
+            "uomId": uomID
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: endpoint, method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Updated"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func deleteHumidityRecord(plantId: Int, recordId: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/humidity/\(plantId)/\(recordId)"
+        request(endpoint: endpoint, method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Deleted"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
     
+    
+    // MARK: - Light Record CRUD
+    func fetchLightRecords(forPlantId plantId: Int, completion: @escaping (Result<[LightRecord], Error>) -> Void) {
+        request(endpoint: "/light/\(plantId)", completion: completion)
+    }
+
+    func createLightRecord(plantId: Int, light: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let body: [String: Any] = [
+            "light": light,
+            "date": date,
+            "uomId": uomID
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: "/light/\(plantId)", method: "POST", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Light record created"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func updateLightRecord(plantId: Int, recordId: Int, light: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let body: [String: Any] = [
+            "light": light,
+            "date": date,
+            "uomId": uomID
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: "/light/\(plantId)/\(recordId)", method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Light record updated"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func deleteLightRecord(plantId: Int, recordId: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        request(endpoint: "/light/\(plantId)/\(recordId)", method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Light record deleted"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    // MARK: - Soil Moisture Record CRUD
+
+    func fetchSoilMoistureRecords(forPlantId plantId: Int, completion: @escaping (Result<[SoilMoistureRecord], Error>) -> Void) {
+        request(endpoint: "/soil-moisture/\(plantId)", completion: completion)
+    }
+
+    func createSoilMoistureRecord(plantId: Int, moisture: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let body: [String: Any] = [
+            "soilMoisture": moisture,
+            "date": date,
+            "uomId": uomID
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: "/soil-moisture/\(plantId)", method: "POST", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Soil moisture record created"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func updateSoilMoistureRecord(plantId: Int, recordId: Int, moisture: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let body: [String: Any] = [
+            "soilMoisture": moisture,
+            "date": date,
+            "uomId": uomID
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: "/soil-moisture/\(plantId)/\(recordId)", method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Soil moisture record updated"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func deleteSoilMoistureRecord(plantId: Int, recordId: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        request(endpoint: "/soil-moisture/\(plantId)/\(recordId)", method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Soil moisture record deleted"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    // MARK: - Temperature Record CRUD
+    func fetchTemperatureRecords(forPlantId plantId: Int, completion: @escaping (Result<[TemperatureRecord], Error>) -> Void) {
+        request(endpoint: "/temperature/\(plantId)", completion: completion)
+        
+    }
+
+    func createTemperatureRecord(plantId: Int, temperature: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let body: [String: Any] = [
+            "temperature": temperature,
+            "date": date,
+            "uomId": uomID
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: "/temperature/\(plantId)", method: "POST", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Temperature record created"))
+                print("✅ Decoded Temperature Records: \(response)")
+
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func updateTemperatureRecord(plantId: Int, recordId: Int, temperature: Double, date: String, uomID: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        let body: [String: Any] = [
+            "temperature": temperature,
+            "date": date,
+            "uomId": uomID
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        request(endpoint: "/temperature/\(plantId)/\(recordId)", method: "PUT", body: jsonData) { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Temperature record updated"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func deleteTemperatureRecord(plantId: Int, recordId: Int, completion: @escaping (Result<String, Error>) -> Void) {
+        request(endpoint: "/temperature/\(plantId)/\(recordId)", method: "DELETE") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response["message"] ?? "Temperature record deleted"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+
+    //MARK: Login functions
     //login function for user
     func login(username: String, password: String, completion: @escaping (Result<LoginResponse, Error>) -> Void) {
             let endpoint = "/auth/login"
@@ -265,5 +483,20 @@ extension APIManager {
                 }
             }
         }
+    //logging a user out
+    func logout(completion: @escaping (Result<String, Error>) -> Void) {
+        let endpoint = "/auth/logout"
+        
+        request(endpoint: endpoint, method: "POST") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                UserDefaults.standard.removeObject(forKey: "authToken")
+                completion(.success(response["message"] ?? "Logged out successfully"))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     
 }//end extension
