@@ -85,6 +85,97 @@ struct FamilyData: Codable {
     let common_name: String?
     let slug: String
 }
+//MARK: For searching
+struct TrefleFamily: Identifiable, Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let common_name: String?
+    var imageURL: String? = nil
+}
+
+struct FamilyResponse: Codable {
+    let data: [TrefleFamily]
+    let links: PaginationLinks?
+    let meta: MetaData?
+}
+struct MetaData: Codable {
+    let total: Int?
+    let currentPage: Int?
+    let totalPages: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case total
+        case currentPage = "current_page"
+        case totalPages = "total_pages"
+    }
+}
+
+struct PaginationLinks: Codable {
+    let next: String?
+}
+struct FamilyDetails: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let common_name: String?
+    let bibliography: String?
+    let author: String?
+    let year: Int?
+    let links: [String: String?]?
+    let division_order: DivisionOrder?
+}
+
+struct DivisionOrder: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let division_class: DivisionClass?
+}
+
+struct DivisionClass: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let division: Division?
+}
+
+struct Division: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let subkingdom: Subkingdom?
+}
+
+struct Subkingdom: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let kingdom: Kingdom?
+}
+
+struct Kingdom: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+}
+
+struct SingleFamilyResponse: Codable {
+    let data: FamilyDetails
+}
+// MARK: - Trefle Plant Family Model
+struct PlantFamily: Identifiable, Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let common_name: String?
+    let image_url: String? // Optional: In case we can associate a visual, you can later fetch or map one
+}
+struct FamilyListResponse: Codable {
+    let data: [PlantFamily]
+}
+
+
 //wrapper structs for inconsistent json responses
 struct FlexibleFamily: Codable {
     let name: String
@@ -125,6 +216,8 @@ struct FlexibleGenus: Codable {
 // MARK: - API JSON Wrappers
 struct TrefleResponse: Codable {
     let data: [TreflePlant]
+      let links: PaginationLinks?
+      let meta: MetaData?
 }
 
 struct SingleTrefleResponse: Codable {
@@ -133,4 +226,39 @@ struct SingleTrefleResponse: Codable {
 
 struct DistributionResponse: Codable {
     let data: [DistributionRegion]
+}
+
+//MARK: CACHING
+class TrefleFamilyCache {
+    static let shared = TrefleFamilyCache()
+    private init() {}
+    var allFamilies: [TrefleFamily] = []
+    var isLoaded = false
+}
+
+class TreflePlantCache {
+    static let shared = TreflePlantCache()
+    private init(){}
+    //house all plants in this var
+    var allPlants: [TreflePlant] = []
+    var isLoaded = false
+}
+
+class TrefleFamilyDetailsCache {
+    static let shared = TrefleFamilyDetailsCache()
+    private init() {}
+    var familyDetailsMap: [String: FamilyDetails] = [:]
+}
+class TrefleRegionCache {
+    static let shared = TrefleRegionCache()
+    private init() {}
+
+    var allRegions: [TrefleDistributionRegion] = []
+    var isLoaded = false
+}
+class TrefleRegionDetailsCache {
+    static let shared = TrefleRegionDetailsCache()
+    private init() {}
+
+    var regionDetailsMap: [String: TrefleDistributionRegionDetails] = [:] // slug → details
 }

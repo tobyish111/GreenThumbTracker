@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LoginView: View {
     @State private var showingLoginForm: Bool = false
+    @State private var showingRegisterForm: Bool = false
        @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
 
        var body: some View {
@@ -55,8 +56,12 @@ struct LoginView: View {
                            }
 
                            GreenButton(title: "Sign Up") {
-                               print("Not implemented yet!")
+                               showingRegisterForm = true
                            }
+                           .sheet(isPresented: $showingRegisterForm) {
+                               RegisterView()
+                           }
+
                        }
 
                        Spacer()

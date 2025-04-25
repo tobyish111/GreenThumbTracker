@@ -53,7 +53,7 @@ struct HomePageView: View {
                            VStack(spacing: 20) {
                                HomeNavLink(title: "Add a Plant", systemImage: "plus.circle", destination: AddPlantView(), namespace: navNamespace)
                                HomeNavLink(title: "View My Plants", systemImage: "leaf", destination: ViewPlantsView(), namespace: navNamespace)
-                               HomeNavLink(title: "Encyclopedia", systemImage: "book", destination: EncyclopediaView(), namespace: navNamespace)
+                               HomeNavLink(title: "Encyclopedia", systemImage: "book", destination: EncyclopediaMenuView(), namespace: navNamespace)
 
                                // ✅ Log Out Button styled like the rest
                                Button(action: {

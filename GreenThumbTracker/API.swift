@@ -497,6 +497,48 @@ extension APIManager {
             }
         }
     }
+    func register(username: String, email: String, password: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/auth/register") else {
+            completion(.failure(URLError(.badURL)))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // ✅ Confirm we are NOT sending confirmPassword
+        let body: [String: String] = [
+            "username": username,
+            "email": email,
+            "password": password
+        ]
+        print("📤 Registering user with body:", body)
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            print("❌ Failed to serialize register body:", error)
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
+                completion(.failure(NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Registration failed with status code \(httpResponse.statusCode)"])))
+                return
+            }
+
+            completion(.success(()))
+        }.resume()
+    }
+
+
 
     
 }//end extension
