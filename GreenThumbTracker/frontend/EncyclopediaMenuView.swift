@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct EncyclopediaMenuView: View {
+    @State private var useCachedData = false
     let columns = [
         GridItem(.flexible()),
         GridItem(.flexible())
@@ -18,29 +19,37 @@ struct EncyclopediaMenuView: View {
             LinearGradient(colors: [.zenGreen.opacity(0.9), .zenBeige.opacity(0.2), .green.opacity(0.7)],
                            startPoint: .topLeading,
                            endPoint: .bottomTrailing)
-            .ignoresSafeArea()
-            
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 20) {
-                    menuItem(title: "Browse Plants", systemImage: "leaf.fill") {
-                        EncyclopediaView() // push to main view
-                    }
-                    menuItem(title: "Search by Region", systemImage: "globe.americas") {
-                        // TODO: Replace with region search view
-                        TrefleRegionListView()
-                    }
-                    menuItem(title: "Plant Families", systemImage: "tree") {
-                        FamilySearchView()
-                    }
-                    menuItem(title: "Search", systemImage: "magnifyingglass") {
-                        TrefleSearchView()
-                    }
+                .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Toggle(isOn: $useCachedData) {
+                    Label("Load Cached Data Instead", systemImage: "archivebox")
+                        .font(.headline)
                 }
                 .padding()
+                .background(Color.white.opacity(0.9))
+                .cornerRadius(12)
+                .padding([.top, .horizontal])
+
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 20) {
+                        menuItem(title: "Browse Plants", systemImage: "leaf.fill") {
+                            EncyclopediaView(useCachedData: useCachedData)
+                        }
+                        menuItem(title: "Search by Region", systemImage: "globe.americas") {
+                            TrefleRegionListView(useCachedData: useCachedData)
+                        }
+                        menuItem(title: "Plant Families", systemImage: "tree") {
+                            FamilySearchView(useCachedData: useCachedData)
+                        }
+                    }
+                    .padding()
+                }
             }
         }
         .navigationTitle("Trefle Menu")
         .navigationBarTitleDisplayMode(.inline)
+
     }
     
     @ViewBuilder

@@ -10,12 +10,16 @@ import SwiftUI
 @main
 struct GreenThumbTrackerApp: App {
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
+    @StateObject var conflictManager = ConflictController.shared
+    @StateObject var networkMonitor = NetworkMonitor()
+    @StateObject var appState = AppState()
 
         var body: some Scene {
             WindowGroup {
                 ZStack {
                     if isLoggedIn {
                         HomePageView()
+                            .environmentObject(networkMonitor)
                             .transition(
                                 .asymmetric(
                                     insertion: .scale(scale: 1.1).combined(with: .opacity),
@@ -26,6 +30,14 @@ struct GreenThumbTrackerApp: App {
                         LoginView()
                             .transition(.opacity)
                     }
+                }.sheet(item: Binding<ConflictController.ConflictJob?>(
+                    get: { conflictManager.queue.first },
+                    set: { _ in ConflictController.shared.dequeue() }
+                )) { job in
+                    job.resolveUI()
+                }
+                .onAppear{
+                    SyncManager.shared.startMonitoring(networkMonitor: networkMonitor)
                 }
                 .animation(.easeInOut(duration: 0.4), value: isLoggedIn)
             }

@@ -16,6 +16,7 @@ struct FamilySearchView: View {
     @State private var totalPages = 1
     @State private var familiesLoaded = 0
     @State private var totalFamilies = 1
+    let useCachedData: Bool
 
 
        var body: some View {
@@ -65,44 +66,58 @@ struct FamilySearchView: View {
                .navigationTitle("Search Families")
            }
            .onAppear {
-               if !TrefleFamilyCache.shared.isLoaded {
-                      print("🌱 Fetching all families from Trefle...")
-                      TrefleAPI.shared.preloadAllFamilies(
-                          delay: 0.4,
-                          progress: { loadedCount, totalFamilies, currentPage, totalPages in
-                              DispatchQueue.main.async {
-                                  self.familiesLoaded = loadedCount
-                                  self.totalFamilies = totalFamilies
-                                  self.currentPage = currentPage
-                                  self.totalPages = totalPages
-                              }
-                          }
-                          ,
-                          completion: { result in
-                              DispatchQueue.main.async {
-                                  switch result {
-                                  case .success(let families):
-                                      TrefleFamilyCache.shared.allFamilies = families
-                                      TrefleFamilyCache.shared.isLoaded = true
-                                      self.totalFamilies = families.count
-                                      self.allFamilies = families
-                                      self.filteredFamilies = families
-                                      self.isLoading = false
-                                      print("✅ Loaded \(families.count) families.")
-                                  case .failure(let error):
-                                      print("❌ Failed to load families: \(error)")
-                                      self.isLoading = false
-                                  }
-                              }
-                          }
-                      )
-                  } else {
-                      print("📦 Using cached families")
-                      allFamilies = TrefleFamilyCache.shared.allFamilies
-                      filteredFamilies = allFamilies
-                      isLoading = false
-                  }
+               if useCachedData {
+                   if let cached = TreflePersistentCacheManager.shared.load([TrefleFamily].self, from: "families.json") {
+                       print("📦 Loaded families from disk cache")
+                       TrefleFamilyCache.shared.allFamilies = cached
+                       TrefleFamilyCache.shared.isLoaded = true
+                       allFamilies = cached
+                       filteredFamilies = cached
+                       isLoading = false
+                   } else {
+                       print("⚠️ No cached family data found.")
+                       isLoading = false
+                   }
+               } else if TrefleFamilyCache.shared.isLoaded {
+                   print("📦 Using in-memory cached families")
+                   allFamilies = TrefleFamilyCache.shared.allFamilies
+                   filteredFamilies = allFamilies
+                   isLoading = false
+               } else {
+                   print("🌱 Fetching all families from Trefle API...")
+                   TrefleAPI.shared.preloadAllFamilies(
+                       delay: 0.4,
+                       progress: { loadedCount, totalFamilies, currentPage, totalPages in
+                           DispatchQueue.main.async {
+                               self.familiesLoaded = loadedCount
+                               self.totalFamilies = totalFamilies
+                               self.currentPage = currentPage
+                               self.totalPages = totalPages
+                           }
+                       },
+                       completion: { result in
+                           DispatchQueue.main.async {
+                               switch result {
+                               case .success(let families):
+                                   TrefleFamilyCache.shared.allFamilies = families
+                                   TrefleFamilyCache.shared.isLoaded = true
+                                   TreflePersistentCacheManager.shared.save(families, to: "families.json")
+                                   self.totalFamilies = families.count
+                                   self.allFamilies = families
+                                   self.filteredFamilies = families
+                                   self.isLoading = false
+                                   print("✅ Loaded and cached \(families.count) families.")
+                               case .failure(let error):
+                                   print("❌ Failed to load families: \(error)")
+                                   self.isLoading = false
+                               }
+                           }
+                       }
+                   )
+               }
            }
+
+
 
 
        }
@@ -148,6 +163,7 @@ struct FamilyCardView: View {
     }
 }
 
+
 #Preview {
-    FamilySearchView()
+    FamilySearchView(useCachedData: false)
 }

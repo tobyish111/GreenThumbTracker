@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+import Kingfisher
 struct TrefleSearchView: View {
     @State private var query: String = ""
        @State private var searchResults: [TreflePlant] = []
@@ -35,81 +35,104 @@ struct TrefleSearchView: View {
 
                    if isLoading {
                        ProgressView("Searching...")
-                   } else if let error = errorMessage {
-                       Text(error)
-                           .foregroundColor(.red)
-                           .padding()
                    } else {
+                       if let error = errorMessage {
+                           Text(error)
+                               .foregroundColor(.orange)
+                               .padding()
+                       }
+
                        ScrollView {
                            LazyVStack(spacing: 12) {
                                ForEach(searchResults) { plant in
                                    NavigationLink(destination: TreflePlantView(plant: plant)) {
-                                       HStack(spacing: 12) {
-                                           AsyncImage(url: URL(string: plant.image_url ?? "")) { phase in
-                                               switch phase {
-                                               case .empty:
-                                                   ProgressView()
-                                               case .success(let image):
-                                                   image.resizable().scaledToFill()
-                                               default:
-                                                   Image(systemName: "leaf")
-                                               }
-                                           }
-                                           .frame(width: 60, height: 60)
-                                           .cornerRadius(8)
-                                           .clipped()
-
-                                           VStack(alignment: .leading) {
-                                               Text(plant.common_name ?? "Unknown")
-                                                   .font(.headline)
-                                                   .foregroundColor(.black)
-                                               Text(plant.scientific_name)
-                                                   .font(.subheadline)
-                                                   .foregroundColor(.gray)
-                                           }
-
-                                           Spacer()
-                                       }
-                                       .padding()
-                                       .background(Color.white.opacity(0.95))
-                                       .cornerRadius(12)
-                                       .shadow(radius: 3)
+                                       // your existing row code
                                    }
                                }
                            }
                            .padding(.horizontal)
                        }
                    }
+
+                   ScrollView {
+                       LazyVStack(spacing: 12) {
+                           ForEach(searchResults) { plant in
+                               NavigationLink(destination: TreflePlantView(plant: plant)) {
+                                   HStack(spacing: 12) {
+                                       KFImage(URL(string: plant.image_url ?? ""))
+                                           .placeholder {
+                                               Image(systemName: "leaf").resizable().scaledToFit()
+                                           }
+                                           .resizable()
+                                           .scaledToFill()
+                                           .frame(width: 60, height: 60)
+                                           .cornerRadius(8)
+                                           .clipped()
+
+                                       VStack(alignment: .leading) {
+                                           Text(plant.common_name ?? "Unknown")
+                                               .font(.headline)
+                                               .foregroundColor(.black)
+                                           Text(plant.scientific_name)
+                                               .font(.subheadline)
+                                               .foregroundColor(.gray)
+                                       }
+
+                                       Spacer()
+                                   }
+                                   .padding()
+                                   .background(Color.white.opacity(0.95))
+                                   .cornerRadius(12)
+                                   .shadow(radius: 3)
+                               }
+                           }
+                       }
+                       .padding(.horizontal)
+                   }
+
                }
                .navigationTitle("Search Plants")
                .navigationBarTitleDisplayMode(.inline)
            }
        }
 
-       private func performSearch() {
-           let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-           guard !trimmed.isEmpty else {
-               searchResults = []
-               errorMessage = nil
-               return
-           }
+    private func performSearch() {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            errorMessage = nil
+            return
+        }
 
-           isLoading = true
-           errorMessage = nil
+        isLoading = true
+        errorMessage = nil
 
-           TrefleAPI.shared.searchPlants(query: trimmed) { result in
-               DispatchQueue.main.async {
-                   isLoading = false
-                   switch result {
-                   case .success(let results):
-                       searchResults = results
-                       print("🔍 Found \(results.count) results for '\(trimmed)'")
-                   case .failure(let error):
-                       errorMessage = "Failed to search: \(error.localizedDescription)"
-                   }
-               }
-           }
-       }
+        TrefleAPI.shared.searchPlants(query: trimmed) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                switch result {
+                case .success(let results):
+                    searchResults = results
+                    print("🔍 Found \(results.count) results for '\(trimmed)'")
+                case .failure(let error):
+                    print("❌ Search failed: \(error.localizedDescription)")
+                    // ✅ Always fallback on failure
+                    searchResults = fallbackPlants.filter {
+                        $0.common_name?.localizedCaseInsensitiveContains(trimmed) == true ||
+                        $0.scientific_name.localizedCaseInsensitiveContains(trimmed)
+                    }
+
+                    if searchResults.isEmpty {
+                        errorMessage = "No matches found locally for '\(trimmed)'"
+                    } else {
+                        errorMessage = "🌿 Plant search is offline — showing local matches"
+                    }
+                }
+            }
+        }
+    }
+
+
    }
 
 

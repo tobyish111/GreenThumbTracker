@@ -16,6 +16,8 @@ struct TrefleRegionListView: View {
        @State private var totalRegions = 1
        @State private var errorMessage: String?
        @State private var searchQuery = ""
+    @State private var loadedCount = 0
+    let useCachedData: Bool
 
        var body: some View {
            NavigationView {
@@ -43,7 +45,7 @@ struct TrefleRegionListView: View {
                                    .progressViewStyle(LinearProgressViewStyle())
                                    .padding(.horizontal)
 
-                               Text("Loading regions... (\(filteredRegions.count)/\(totalRegions))")
+                               Text("Loading regions... (\(loadedCount)/\(totalRegions))")
                                    .foregroundColor(.black)
                                    .font(.subheadline)
                                    .bold()
@@ -75,14 +77,60 @@ struct TrefleRegionListView: View {
                }
                .navigationTitle("Plant Regions")
                .onAppear {
-                   if !TrefleRegionCache.shared.isLoaded {
-                       loadAllRegions()
-                   } else {
+                   if useCachedData {
+                       if let cached = TreflePersistentCacheManager.shared.load([TrefleDistributionRegion].self, from: "regions.json") {
+                           print("📦 Loaded regions from cache.")
+                           TrefleRegionCache.shared.allRegions = cached
+                           TrefleRegionCache.shared.isLoaded = true
+                           allRegions = cached
+                           filteredRegions = cached
+                           isLoading = false
+                       } else {
+                           print("⚠️ No cached region data found.")
+                           isLoading = false
+                       }
+                   } else if TrefleRegionCache.shared.isLoaded {
+                       print("📦 Using in-memory region cache")
                        allRegions = TrefleRegionCache.shared.allRegions
                        filteredRegions = allRegions
                        isLoading = false
+                   } else {
+                       print("🌍 Fetching regions from Trefle API...")
+                       TrefleAPI.shared.preloadAllDistributionRegions(
+                           delay: 0.4,
+                           progress: { loadedCount, totalCount, currentPage, totalPages in
+                               DispatchQueue.main.async {
+                                   self.loadedCount = loadedCount
+                                   self.totalRegions = totalCount
+                                   self.currentPage = currentPage
+                                   self.totalPages = totalPages
+                                   
+                                   //show partial content
+                                   self.filteredRegions = Array(TrefleRegionCache.shared.allRegions.prefix(loadedCount))
+                               }
+                           },
+                           completion: { result in
+                               DispatchQueue.main.async {
+                                   switch result {
+                                   case .success(let regions):
+                                       TrefleRegionCache.shared.allRegions = regions
+                                       TrefleRegionCache.shared.isLoaded = true
+                                       TreflePersistentCacheManager.shared.save(regions, to: "regions.json")
+                                       allRegions = regions
+                                       filteredRegions = regions
+                                       isLoading = false
+                                       print("✅ Loaded and cached \(regions.count) regions.")
+                                   case .failure(let error):
+                                       errorMessage = error.localizedDescription
+                                       isLoading = false
+                                   }
+                               }
+                           }
+                       )
                    }
                }
+
+
            }
        }
 

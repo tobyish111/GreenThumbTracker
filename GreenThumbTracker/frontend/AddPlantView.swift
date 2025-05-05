@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct AddPlantView: View {
     var existingPlant: Plant? = nil

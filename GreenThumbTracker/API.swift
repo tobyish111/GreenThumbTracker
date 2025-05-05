@@ -61,6 +61,7 @@ class APIManager {
 //extention housing crud operations to db endpoints
 extension APIManager {
     //adding a plant
+    //MARK: Plants
     func addPlant(name: String, species: String, completion: @escaping (Result<String, Error>) -> Void) {
         let endpoint = "/plants"
         let body: [String: Any] = [
@@ -474,10 +475,20 @@ extension APIManager {
             request(endpoint: endpoint, method: "POST", body: jsonData) { (result: Result<LoginResponse, Error>) in
                 switch result {
                 case .success(let loginResponse):
-                    //Store token in UserDefaults
-                    UserDefaults.standard.set(loginResponse.token, forKey: "authToken")
-                    print("Token Stored:", loginResponse.token)
-                    completion(.success(loginResponse))
+                    // Store token in UserDefaults
+                                UserDefaults.standard.set(loginResponse.token, forKey: "authToken")
+                                print("Token Stored:", loginResponse.token)
+
+                                // ✅ Fetch Trefle Client Token right after login
+                                TrefleTokenManager.shared.fetchClientToken { success in
+                                    if success {
+                                        print("✅ Successfully fetched Trefle client token after login!")
+                                    } else {
+                                        print("❌ Failed to fetch Trefle client token after login.")
+                                    }
+                                    // After trying to fetch, complete login
+                                    completion(.success(loginResponse))
+                                }
                 case .failure(let error):
                     completion(.failure(error))
                 }
@@ -537,8 +548,174 @@ extension APIManager {
             completion(.success(()))
         }.resume()
     }
+//syncing plant
+    func syncPlant(_ local: LocalPlant) async -> Bool {
+            await withCheckedContinuation { continuation in
+                addPlant(name: local.name, species: local.species) { result in
+                    switch result {
+                    case .success:
+                        continuation.resume(returning: true)
+                    case .failure:
+                        continuation.resume(returning: false)
+                    }
+                }
+            }
+        }
+    func syncWaterRecord(_ record: LocalWaterRecord) async -> Bool {
+            guard let plantId = record.plant?.backendId else { return false }
 
+            return await withCheckedContinuation { continuation in
+                createWaterRecord(
+                    plantId: plantId,
+                    amount: Int(record.amount),
+                    date: ISO8601DateFormatter().string(from: record.date)
+                ) { result in
+                    continuation.resume(returning: result.isSuccess)
+                }
+            }
+        }
 
+        func syncGrowthRecord(_ record: LocalGrowthRecord) async -> Bool {
+            guard let plantId = record.plant?.backendId else { return false }
 
-    
+            return await withCheckedContinuation { continuation in
+                createGrowthRecord(
+                    plantId: plantId,
+                    height: record.height,
+                    date: ISO8601DateFormatter().string(from: record.date),
+                    uomID: 1 // Adjust as needed
+                ) { result in
+                    continuation.resume(returning: result.isSuccess)
+                }
+            }
+        }
+
+        func syncHumidityRecord(_ record: LocalHumidityRecord) async -> Bool {
+            guard let plantId = record.plant?.backendId else { return false }
+
+            return await withCheckedContinuation { continuation in
+                createHumidityRecord(
+                    plantId: plantId,
+                    humidity: record.humidity,
+                    date: ISO8601DateFormatter().string(from: record.date),
+                    uomID: 1
+                ) { result in
+                    continuation.resume(returning: result.isSuccess)
+                }
+            }
+        }
+
+        func syncLightRecord(_ record: LocalLightRecord) async -> Bool {
+            guard let plantId = record.plant?.backendId else { return false }
+
+            return await withCheckedContinuation { continuation in
+                createLightRecord(
+                    plantId: plantId,
+                    light: record.light,
+                    date: ISO8601DateFormatter().string(from: record.date),
+                    uomID: 1
+                ) { result in
+                    continuation.resume(returning: result.isSuccess)
+                }
+            }
+        }
+
+        func syncSoilMoistureRecord(_ record: LocalSoilMoistureRecord) async -> Bool {
+            guard let plantId = record.plant?.backendId else { return false }
+
+            return await withCheckedContinuation { continuation in
+                createSoilMoistureRecord(
+                    plantId: plantId,
+                    moisture: record.soilMoisture,
+                    date: ISO8601DateFormatter().string(from: record.date),
+                    uomID: 1
+                ) { result in
+                    continuation.resume(returning: result.isSuccess)
+                }
+            }
+        }
+
+    func syncTemperatureRecord(_ record: LocalTemperatureRecord) async -> Bool {
+        guard let plantId = record.plant?.backendId else { return false }
+        
+        return await withCheckedContinuation { continuation in
+            createTemperatureRecord(
+                plantId: plantId,
+                temperature: record.temperature,
+                date: ISO8601DateFormatter().string(from: record.date),
+                uomID: 1
+            ) { result in
+                continuation.resume(returning: result.isSuccess)
+            }
+        }
+    }
+
 }//end extension
+struct WikipediaSummary: Codable {
+    let extract: String
+    let title: String
+    let thumbnail: Thumbnail?
+
+    struct Thumbnail: Codable {
+        let source: String
+    }
+}
+//getter
+func fetchWikipediaSummary(for familyName: String, completion: @escaping (WikipediaSummary?) -> Void) {
+    let encodedName = familyName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? familyName
+    guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(encodedName)") else {
+        completion(nil)
+        return
+    }
+
+    URLSession.shared.dataTask(with: url) { data, response, error in
+        if let data = data {
+            let summary = try? JSONDecoder().decode(WikipediaSummary.self, from: data)
+            completion(summary)
+        } else {
+            completion(nil)
+        }
+    }.resume()
+}
+//for caching
+class WikipediaSummaryCache {
+    static let shared = WikipediaSummaryCache()
+
+    private var cache: [String: WikipediaSummary] = [:]
+    private let fileURL: URL
+
+    private init() {
+        let filename = "WikipediaSummaryCache.json"
+        let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        self.fileURL = urls[0].appendingPathComponent(filename)
+        loadFromDisk()
+    }
+
+    func get(for key: String) -> WikipediaSummary? {
+        return cache[key.lowercased()]
+    }
+
+    func set(_ summary: WikipediaSummary, for key: String) {
+        let lowerKey = key.lowercased()
+        cache[lowerKey] = summary
+        saveToDisk()
+    }
+
+    private func saveToDisk() {
+        do {
+            let data = try JSONEncoder().encode(cache)
+            try data.write(to: fileURL)
+        } catch {
+            print("❌ Failed to save WikipediaSummaryCache:", error.localizedDescription)
+        }
+    }
+
+    private func loadFromDisk() {
+        do {
+            let data = try Data(contentsOf: fileURL)
+            cache = try JSONDecoder().decode([String: WikipediaSummary].self, from: data)
+        } catch {
+            print("⚠️ No previous summary cache or failed to load:", error.localizedDescription)
+        }
+    }
+}
