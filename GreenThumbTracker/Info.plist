@@ -6,9 +6,21 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app uses your location to check for frost warnings and help protect your plants.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses your location to check for frost warnings and help protect your plants.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This App saves charts and plant visuals to your photo library.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
-	<string>GreenThumbTracker_Applcon_IconOnly</string>
+	<string>LaunchScreen.swift</string>
 </dict>
 </plist>

@@ -17,6 +17,8 @@ struct TrefleRegionListView: View {
        @State private var errorMessage: String?
        @State private var searchQuery = ""
     @State private var loadedCount = 0
+    @State private var showClearCacheModal = false
+
     let useCachedData: Bool
 
        var body: some View {
@@ -74,7 +76,66 @@ struct TrefleRegionListView: View {
                            }
                        }
                    }
-               }
+                   .toolbar {
+                       ToolbarItem(placement: .navigationBarTrailing) {
+                           Button(action: {
+                               withAnimation {
+                                   showClearCacheModal = true
+                               }
+                           }) {
+                               Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                                   .font(.title2)
+                                   .foregroundColor(.green)
+                           }
+                       }
+                   }
+                   if showClearCacheModal {
+                       Color.black.opacity(0.4).ignoresSafeArea().zIndex(1)
+
+                       VStack(spacing: 16) {
+                           Text("Clear Region Cache?")
+                               .font(.title2)
+                               .fontWeight(.semibold)
+
+                           Text("This will delete all downloaded region data. You'll need to redownload them.")
+                               .font(.subheadline)
+                               .foregroundColor(.gray)
+                               .multilineTextAlignment(.center)
+
+                           HStack {
+                               Button("Cancel") {
+                                   withAnimation {
+                                       showClearCacheModal = false
+                                   }
+                               }
+                               .padding()
+                               .background(Color.zenBeige)
+                               .cornerRadius(12)
+
+                               Button("Clear Cache") {
+                                   TreflePersistentCacheManager.shared.clear(filename: "regions.json")
+                                   TrefleRegionCache.shared.allRegions = []
+                                   TrefleRegionCache.shared.isLoaded = false
+                                   allRegions = []
+                                   filteredRegions = []
+                                   withAnimation {
+                                       showClearCacheModal = false
+                                   }
+                                   print("🧹 Cleared region cache.")
+                               }
+                               .padding()
+                               .background(Color.red.opacity(0.85))
+                               .foregroundColor(.white)
+                               .cornerRadius(12)
+                           }
+                       }
+                       .padding()
+                       .background(RoundedRectangle(cornerRadius: 20).fill(Color.white))
+                       .padding(40)
+                       .zIndex(2)
+                   }
+
+               }//end outer zstack
                .navigationTitle("Plant Regions")
                .onAppear {
                    if useCachedData {

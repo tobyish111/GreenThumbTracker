@@ -9,10 +9,11 @@ import Foundation
 //function to call to any endpoint from our db api!
 class APIManager {
     static let shared = APIManager() //singleton instance
-    private let baseURL = "http://192.168.1.11:8800/api"         //dev endpoint
+    //private let baseURL = "http://192.168.1.11:8800/api"         //dev endpoint
     //private let baseURL = "https://greenthumbtracker.org/api" //prod endpoint (aws)
+    private let baseURL = "https://greenthumbtracker.com/api" //prod endpoint (Oracle Cloud)
     
-    //generic functiosn for sending requests
+    //generic function for sending requests
     private func request<T: Decodable>(endpoint: String, method: String = "GET", body: Data? = nil, completion: @escaping (Result<T, Error>) -> Void){
         guard let url = URL(string: "\(baseURL)\(endpoint)") else { return }
         var request = URLRequest(url: url)
@@ -548,6 +549,62 @@ extension APIManager {
             completion(.success(()))
         }.resume()
     }
+    //for reseting password
+    enum APIError: Error {
+        case invalidURL
+        case serverError
+    }
+
+    //forgot password
+    func sendForgotPasswordEmail(email: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/auth/forgot-password") else {
+            return completion(.failure(APIError.invalidURL))
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload = ["email": email]
+        request.httpBody = try? JSONEncoder().encode(payload)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                return completion(.failure(error))
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200..<300).contains(httpResponse.statusCode) else {
+                return completion(.failure(APIError.serverError))
+            }
+
+            completion(.success(()))
+        }.resume()
+    }
+    //resend email
+    func resendEmailVerification(email: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/auth/resend-verification") else {
+            return completion(.failure(APIError.invalidURL))
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(["email": email])
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+            } else if let httpResponse = response as? HTTPURLResponse,
+                      (200..<300).contains(httpResponse.statusCode) {
+                completion(.success(()))
+            } else {
+                completion(.failure(APIError.serverError))
+            }
+        }.resume()
+    }
+
+
 //syncing plant
     func syncPlant(_ local: LocalPlant) async -> Bool {
             await withCheckedContinuation { continuation in
@@ -718,4 +775,5 @@ class WikipediaSummaryCache {
             print("⚠️ No previous summary cache or failed to load:", error.localizedDescription)
         }
     }
+    
 }

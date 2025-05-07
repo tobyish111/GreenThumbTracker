@@ -55,7 +55,7 @@ struct ViewPlantsView: View {
                         
                         Spacer()
                     }
-                    .padding(.top)
+                    .padding(.top, 50)
                     
                     if let message = deletionMessage {
                         Text(message)
@@ -113,6 +113,7 @@ struct ViewPlantsView: View {
                                 }
                                 .padding(.horizontal)
                             }
+                            .padding(.top,10)
                         }
                     }
                     
@@ -120,7 +121,8 @@ struct ViewPlantsView: View {
                 
                 Spacer()
             }
-            .padding()
+            .padding(.top, 50)
+            .ignoresSafeArea()
             .onAppear {
                 if !appState.isOffline{
                     loadPlants()
@@ -186,7 +188,7 @@ struct ViewPlantsView: View {
                 .shadow(radius: 10)
                 .transition(.scale)
             }
-        }
+        }//end nav stack
     }
     
     

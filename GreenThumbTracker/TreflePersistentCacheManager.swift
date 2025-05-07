@@ -24,6 +24,12 @@ final class TreflePersistentCacheManager {
             try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoded = try JSONEncoder().encode(data)
             try encoded.write(to: url, options: .atomic)
+            
+            // Prevent iCloud backup of cache
+                  var resourceValues = URLResourceValues()
+                  resourceValues.isExcludedFromBackup = true
+                  var mutableURL = url
+                  try mutableURL.setResourceValues(resourceValues)
             print("✅ Saved \(filename)")
         } catch {
             print("❌ Error saving \(filename): \(error.localizedDescription)")

@@ -16,6 +16,8 @@ struct FamilySearchView: View {
     @State private var totalPages = 1
     @State private var familiesLoaded = 0
     @State private var totalFamilies = 1
+    @State private var showClearCacheModal = false
+
     let useCachedData: Bool
 
 
@@ -62,9 +64,69 @@ struct FamilySearchView: View {
                        }
                        .padding()
                    }
+                   .toolbar {
+                       ToolbarItem(placement: .navigationBarTrailing) {
+                           Button(action: {
+                               withAnimation {
+                                   showClearCacheModal = true
+                               }
+                           }) {
+                               Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                                   .font(.title2)
+                                   .foregroundColor(.green)
+                           }
+                       }
+                   }
+
                }
                .navigationTitle("Search Families")
-           }
+               if showClearCacheModal {
+                   Color.black.opacity(0.4).ignoresSafeArea().zIndex(1)
+
+                   VStack(spacing: 16) {
+                       Text("Clear Family Cache?")
+                           .font(.title2)
+                           .fontWeight(.semibold)
+
+                       Text("This will delete all downloaded families. You'll need to redownload them.")
+                           .font(.subheadline)
+                           .foregroundColor(.gray)
+                           .multilineTextAlignment(.center)
+
+                       HStack {
+                           Button("Cancel") {
+                               withAnimation {
+                                   showClearCacheModal = false
+                               }
+                           }
+                           .padding()
+                           .background(Color.zenBeige)
+                           .cornerRadius(12)
+
+                           Button("Clear Cache") {
+                               TreflePersistentCacheManager.shared.clear(filename: "families.json")
+                               TrefleFamilyCache.shared.allFamilies = []
+                               TrefleFamilyCache.shared.isLoaded = false
+                               allFamilies = []
+                               filteredFamilies = []
+                               withAnimation {
+                                   showClearCacheModal = false
+                               }
+                               print("🧹 Cleared family cache.")
+                           }
+                           .padding()
+                           .background(Color.red.opacity(0.85))
+                           .foregroundColor(.white)
+                           .cornerRadius(12)
+                       }
+                   }
+                   .padding()
+                   .background(RoundedRectangle(cornerRadius: 20).fill(Color.white))
+                   .padding(40)
+                   .zIndex(2)
+               }
+
+           }//end outer zstack
            .onAppear {
                if useCachedData {
                    if let cached = TreflePersistentCacheManager.shared.load([TrefleFamily].self, from: "families.json") {

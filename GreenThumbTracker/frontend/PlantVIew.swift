@@ -274,6 +274,26 @@ struct PlantView: View {
                                 Text("Add")
                                 Image(systemName: "plus")
                             }
+                            .sheet(isPresented: $showingWaterForm) {
+                                AddWaterSheet(
+                                    plant: plant,
+                                    onSubmit: {
+                                        showingWaterForm = false
+                                        loadWaterData()
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                            withAnimation {
+                                                waterSuccessBanner = "Water record added!"
+                                            }
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                                withAnimation {
+                                                    waterSuccessBanner = nil
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
                             Spacer()
                             Button {
                                 showingWaterEditSheet = true
@@ -821,7 +841,7 @@ struct PlantView: View {
                     .background(Color.white.opacity(0.9))
                     .cornerRadius(12)
                     .shadow(radius: 4)
-                    // Multi-Record Trend Button
+                    //Multi-Record Trend Button
                     VStack(spacing: 12) {
                         Button(action: {
                             showMultiTrendChart = true

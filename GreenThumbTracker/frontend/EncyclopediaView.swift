@@ -7,6 +7,8 @@
 
 import SwiftUI
 import Kingfisher
+import UserNotifications
+import UIKit
 struct EncyclopediaView: View {
     @EnvironmentObject var networkMonitor: NetworkMonitor
         
@@ -35,6 +37,8 @@ struct EncyclopediaView: View {
         @State private var showRedownloadPrompt = false
         @State private var showSignalLostPrompt = false
     @State private var showClearCacheModal = false
+    @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+
     let useCachedData: Bool
 
         var progressFileName = "plant_progress.json"
@@ -120,18 +124,6 @@ struct EncyclopediaView: View {
                         }
                         .padding(.horizontal)
                     }
-
-                    if isLoading {
-                        VStack {
-                            ProgressView(value: Double(loadedCount), total: Double(totalPlants))
-                                .tint(.green)
-                            Text("Loading plants...  (\(loadedCount)/\(totalPlants))")
-                                .foregroundColor(.black)
-                                .font(.subheadline)
-                                .bold()
-                        }
-                        .padding()
-                    } else {
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 ForEach(filteredPlants) { plant in
@@ -173,7 +165,7 @@ struct EncyclopediaView: View {
                             }
                             .padding(.horizontal)
                         }
-                    }
+                    
                 }
                 .padding(.top)
                 .navigationTitle("Plant Encyclopedia")
@@ -389,61 +381,129 @@ struct EncyclopediaView: View {
             }
         }
 
-        private func startDownloadAllPlants(resuming: Bool = false) {
-            guard networkMonitor.isConnected else {
-                showSignalLostPrompt = true
-                return
-            }
+    private func startDownloadAllPlants(resuming: Bool = false) {
+        
+        // Schedule a fallback notification in case the app is killed mid-download
+        let fallbackContent = UNMutableNotificationContent()
+        fallbackContent.title = "Download Interrupted"
+        fallbackContent.body = "The plant encyclopedia download was interrupted. You can resume it next time you open the app."
+        fallbackContent.sound = .default
 
-            isLoading = true
-            downloadInProgress = true
-            userCancelledDownload = false
-            downloadError = nil
-            downloadStartTime = Date()
-            loadedCount = 0
-            estimatedTimeRemaining = nil
+        let fallbackRequest = UNNotificationRequest(
+            identifier: "encyclopediaDownloadInterrupted",
+            content: fallbackContent,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 300, repeats: false) // 5 minutes later
+        )
 
-            allPlants = []
-            filteredPlants = []
+        UNUserNotificationCenter.current().add(fallbackRequest)
 
-            TrefleAPI.shared.preloadAllPlants(
-                delay: 0.4,
-                startingAt: 1,
-                shouldCancel: { self.userCancelledDownload || !networkMonitor.isConnected },
-                progress: { loaded, total, page, totalPages, elapsed in
-                    DispatchQueue.main.async {
-                        self.loadedCount = loaded
-                        self.totalPlants = total
-                        if loaded > 0 {
-                            let avg = elapsed / Double(loaded)
-                            self.estimatedTimeRemaining = avg * Double(total - loaded)
-                        }
+        guard networkMonitor.isConnected else {
+            showSignalLostPrompt = true
+            return
+        }
+
+        // 🌱 Begin background task
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "PlantDownload") {
+            UIApplication.shared.endBackgroundTask(self.backgroundTaskID)
+            self.backgroundTaskID = .invalid
+            print("🛑 Background task expired")
+        }
+
+        isLoading = true
+        downloadInProgress = true
+        userCancelledDownload = false
+        downloadError = nil
+        downloadStartTime = Date()
+        loadedCount = 0
+        estimatedTimeRemaining = nil
+
+        allPlants = []
+        filteredPlants = []
+
+        TrefleAPI.shared.preloadAllPlants(
+            delay: 0.4,
+            startingAt: 1,
+            shouldCancel: { self.userCancelledDownload || !networkMonitor.isConnected },
+            progress: { loaded, total, page, totalPages, elapsed in
+                DispatchQueue.main.async {
+                    self.loadedCount = loaded
+                    self.totalPlants = total
+                    if loaded > 0 {
+                        let avg = elapsed / Double(loaded)
+                        self.estimatedTimeRemaining = avg * Double(total - loaded)
                     }
-                },
-                completion: { result in
-                    DispatchQueue.main.async {
-                        self.isLoading = false
-                        self.downloadInProgress = false
-                        self.estimatedTimeRemaining = nil
+                }
+            },
+            completion: { result in
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.downloadInProgress = false
+                    self.estimatedTimeRemaining = nil
 
-                        switch result {
-                        case .success(let plants):
-                            self.allPlants = plants
-                            self.filteredPlants = plants
-                            TreflePersistentCacheManager.shared.clear(filename: progressFileName)
-                            print("✅ Finished downloading \(plants.count) plants")
-                        case .failure(let error):
-                            if !self.userCancelledDownload {
-                                self.downloadError = error
-                                if !self.networkMonitor.isConnected {
-                                    self.showSignalLostPrompt = true
+                    // ✅ End background task
+                    if self.backgroundTaskID != .invalid {
+                        UIApplication.shared.endBackgroundTask(self.backgroundTaskID)
+                        self.backgroundTaskID = .invalid
+                    }
+
+                    switch result {
+                    case .success(let plants):
+                        // Cancel the fallback notification on success
+                        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["encyclopediaDownloadInterrupted"])
+
+                        self.allPlants = plants
+                        self.filteredPlants = plants
+                        TreflePersistentCacheManager.shared.clear(filename: progressFileName)
+                        print("✅ Finished downloading \(plants.count) plants")
+
+                        // 🔔 Local notification
+                        UNUserNotificationCenter.current().getNotificationSettings { settings in
+                            if settings.authorizationStatus == .authorized {
+                                let content = UNMutableNotificationContent()
+                                content.title = "Encyclopedia Ready!"
+                                content.body = "All \(plants.count) plants have been downloaded and cached."
+                                content.sound = .default
+
+                                let request = UNNotificationRequest(
+                                    identifier: UUID().uuidString,
+                                    content: content,
+                                    trigger: nil
+                                )
+
+                                UNUserNotificationCenter.current().add(request)
+                            }
+                        }
+
+                    case .failure(let error):
+                        if !self.userCancelledDownload {
+                            // Notify failure (only if not cancelled by user)
+                            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                                if settings.authorizationStatus == .authorized {
+                                    let content = UNMutableNotificationContent()
+                                    content.title = "Download Failed"
+                                    content.body = "Something went wrong while downloading the encyclopedia. Please try again later."
+                                    content.sound = .default
+
+                                    let request = UNNotificationRequest(
+                                        identifier: UUID().uuidString,
+                                        content: content,
+                                        trigger: nil
+                                    )
+
+                                    UNUserNotificationCenter.current().add(request)
                                 }
+                            }
+                            self.downloadError = error
+                            if !self.networkMonitor.isConnected {
+                                self.showSignalLostPrompt = true
                             }
                         }
                     }
                 }
-            )
-        }
+            }
+        )
+    }
+
     private func loadInitialPlants() {
         isLoading = true
         page = 1

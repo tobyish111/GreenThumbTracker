@@ -101,6 +101,8 @@ struct LoginFormView: View {
        @State private var password: String = ""
        @State private var errorMessage: String?
        @State private var isLoading: Bool = false
+    @State private var showingForgotPasswordSheet = false
+
 
        var body: some View {
            ZStack {
@@ -140,7 +142,7 @@ struct LoginFormView: View {
                            .font(.footnote)
                            .padding(.top, 5)
                    }
-
+                   
                    GreenButton(title: "Submit") {
                        isLoading = true
                        errorMessage = nil
@@ -162,13 +164,22 @@ struct LoginFormView: View {
                                }
                            }
                        }
-                   }
+                   }//end green button
 
                    Button("Cancel") {
                        showingLoginForm = false
                    }
                    .foregroundColor(.secondary)
                    .padding(.top, 10)
+                   Button("Forgot Password?") {
+                       showingForgotPasswordSheet = true
+                   }
+                   .font(.footnote)
+                   .foregroundColor(.blue)
+                   .sheet(isPresented: $showingForgotPasswordSheet) {
+                       ForgotPasswordSheetView()
+                   }
+
                }
                .padding()
                .padding(.top, 100)
