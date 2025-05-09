@@ -12,7 +12,7 @@ import UserNotifications
 
 class BackgroundTaskManager {
     static let shared = BackgroundTaskManager()
-    private let taskIdentifier = "com.yourcompany.greenthumbtracker.frostCheck"
+    private let taskIdentifier = "com.greenthumbtracker.frostCheck"
 
     func registerBackgroundTasks() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in

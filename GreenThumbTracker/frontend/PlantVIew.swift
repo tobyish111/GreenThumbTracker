@@ -122,9 +122,21 @@ struct PlantView: View {
 
                         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                            let rootVC = windowScene.windows.first?.rootViewController {
+                            
+                            // ✅ Fix: Handle iPad popover requirements
+                            if let popover = alert.popoverPresentationController, UIDevice.current.userInterfaceIdiom == .pad {
+                                popover.sourceView = rootVC.view
+                                popover.sourceRect = CGRect(x: rootVC.view.bounds.midX,
+                                                            y: rootVC.view.bounds.midY,
+                                                            width: 0,
+                                                            height: 0)
+                                popover.permittedArrowDirections = []
+                            }
+                            
                             rootVC.present(alert, animated: true)
                         }
                     }
+
 
                     .sheet(isPresented: $showingImagePicker) {
                         ImagePicker(sourceType: sourceType, image: $selectedImage)
