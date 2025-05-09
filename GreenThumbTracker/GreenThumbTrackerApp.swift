@@ -20,7 +20,10 @@ struct GreenThumbTrackerApp: App {
     @State private var showBanner: Bool = false
 
     let notificationDelegate = NotificationDelegate()
-
+    
+    init() {
+        print("✅ Injecting AppState and NetworkMonitor into RootViewRouter")
+    }
     var body: some Scene {
         
         WindowGroup {
@@ -34,7 +37,7 @@ struct GreenThumbTrackerApp: App {
                     job.resolveUI()
                 }
 
-                // ✅ Overlay goes here, not inside `.sheet`
+                // Overlay goes here, not inside .sheet
                 .overlay(
                     VStack {
                         if showBanner, let message = notificationBannerMessage {
@@ -56,7 +59,7 @@ struct GreenThumbTrackerApp: App {
                 .onAppear {
                     BackgroundTaskManager.shared.registerBackgroundTasks()
                     BackgroundTaskManager.shared.scheduleFrostCheck()
-                    // ✅ Login persistence
+                    //Login persistence
                        if let token = UserDefaults.standard.string(forKey: "authToken") {
                            appState.authToken = token
                            appState.isLoggedIn = true
@@ -104,10 +107,6 @@ struct GreenThumbTrackerApp: App {
                 }
         }
 
-    }
-    class AppState: ObservableObject {
-        @Published var authToken: String = ""
-        @Published var isLoggedIn: Bool = false
     }
 
 }

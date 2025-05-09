@@ -8,26 +8,33 @@
 import SwiftUI
 
 struct RootViewRouter: View {
-    @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
         @EnvironmentObject var appState: AppState
         @EnvironmentObject var networkMonitor: NetworkMonitor
 
         var body: some View {
             Group {
-                if isLoggedIn {
-                    HomePageView()
-                        .environmentObject(appState)
-                        .environmentObject(networkMonitor)
-                        .transition(.scale(scale: 1.1).combined(with: .opacity))
-                } else {
-                    LoginView()
-                        .transition(.opacity)
-                }
+                       if appState.isLoggedIn {
+                           HomePageView()
+                               .environmentObject(appState)
+                               .environmentObject(networkMonitor)
+                               .transition(.scale(scale: 1.1).combined(with: .opacity))
+                       } else {
+                           LoginView()
+                               .environmentObject(appState)
+                               .environmentObject(networkMonitor)
+                               .transition(.opacity)
+                       }
+            }.onAppear{
+                print("RootViewRouter is appearing at runtime! \(appState.isLoggedIn)")
             }
-            .animation(.easeInOut(duration: 0.4), value: isLoggedIn)
+            .animation(.easeInOut(duration: 0.4), value: appState.isLoggedIn)
         }
     }
-
+#if DEBUG
 #Preview {
     RootViewRouter()
+        .environmentObject(AppState())
+        .environmentObject(NetworkMonitor())
 }
+
+#endif

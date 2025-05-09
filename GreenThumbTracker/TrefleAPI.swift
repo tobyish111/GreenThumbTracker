@@ -26,9 +26,8 @@ class TrefleTokenManager: ObservableObject {
     }
 
     func fetchClientToken(completion: @escaping (Bool) -> Void) {
-        let dev: String = "http://192.168.1.11:8800/api/trefle-client-token"
-            let prod: String = "https://greenthumbtracker.org/api/trefle-client-token"
-            guard let url = URL(string: dev) else {
+            let prod: String = "https://greenthumbtracker.com/api/trefle-client-token"
+            guard let url = URL(string: prod) else {
                 print("❗Invalid backend URL for fetching client token.")
                 completion(false)
                 return
@@ -36,7 +35,14 @@ class TrefleTokenManager: ObservableObject {
 
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
-
+        
+        // ✅ Add Bearer token if available
+           if let backendToken = UserDefaults.standard.string(forKey: "authToken") {
+               request.setValue("Bearer \(backendToken)", forHTTPHeaderField: "Authorization")
+           } else {
+               print("❗No auth token found in UserDefaults for Trefle request.")
+           }
+        
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
                     print("❗Error fetching client token: \(error)")
@@ -126,9 +132,6 @@ struct StringOrInt: Codable {
 }
 
 
-// private let token = "X2-PP5itzEF85qDb4Xp6O-68S9T49xFK632ZUDZ8N3Y" // Replace with your own token
-//private let token = "X2-PP5itzEF85qDb4Xp6O-68S9T49xFK632ZUDZ8N3Y"
-//private let token = "jjjzih8UMR2Qvx7zy9aeimsEsVY5j-xVb7qDkmrvKk8"
 // MARK: - API Handler
 class TrefleAPI {
     static let shared = TrefleAPI()
@@ -315,6 +318,7 @@ class TrefleAPI {
     
     //preload all the plants
     var didComplete = false
+    
     func preloadAllPlants(
         delay: TimeInterval = 0.4,
         startingAt startPage: Int = 1,
@@ -455,4 +459,5 @@ class TrefleAPI {
            }
        }
    }
+
 

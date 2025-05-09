@@ -4,7 +4,7 @@
 //
 //  Created by Toby Buckmaster on 5/3/25.
 //
-
+import SwiftUI
 import Foundation
 //conflict resolving logic
 struct ConflictPair<T: RecordSyncable> {
@@ -29,7 +29,47 @@ class ConflictResolver {
     }
 }
 //app state class
+//MARK: App State class, Persistency!
 final class AppState: ObservableObject {
-    @Published var isOffline: Bool = false
+    @AppStorage("authToken") private var storedToken: String = ""
+
+       @Published var authToken: String = ""
+       @Published var isLoggedIn: Bool = false
+       @Published var isOffline: Bool = false
+
+       init() {
+           self.authToken = storedToken
+           self.isLoggedIn = !authToken.isEmpty
+
+           if isLoggedIn {
+               postLoginSetup()
+           }
+       }
+
+       func setAuthToken(_ token: String) {
+           self.authToken = token
+           self.storedToken = token
+           self.isLoggedIn = !token.isEmpty
+
+           if isLoggedIn {
+               postLoginSetup()
+           }
+       }
+
+       func logout() {
+           setAuthToken("")
+       }
+
+       func postLoginSetup() {
+           // Trefle
+           TrefleTokenManager.shared.fetchClientToken { success in
+               print(success ? "✅ Trefle token fetched" : "❌ Trefle token failed")
+           }
+
+           // Backend token (optional)
+           APIManager.shared.refreshBackendToken { success in
+               print(success ? "✅ Backend token refreshed" : "❌ Backend token refresh failed")
+           }
+       }
 }
 

@@ -509,6 +509,28 @@ extension APIManager {
             }
         }
     }
+    //MARK: Refreshing token method
+    func refreshBackendToken(completion: @escaping (Bool) -> Void) {
+        let endpoint = "/auth/refresh"
+
+        request(endpoint: endpoint, method: "POST") { (result: Result<[String: String], Error>) in
+            switch result {
+            case .success(let response):
+                if let newToken = response["token"] {
+                    UserDefaults.standard.set(newToken, forKey: "authToken")
+                    print("✅ Refreshed backend auth token:", newToken)
+                    completion(true)
+                } else {
+                    print("⚠️ No token in refresh response")
+                    completion(false)
+                }
+            case .failure(let error):
+                print("❌ Token refresh failed:", error.localizedDescription)
+                completion(false)
+            }
+        }
+    }
+
     func register(username: String, email: String, password: String, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let url = URL(string: "\(baseURL)/auth/register") else {
             completion(.failure(URLError(.badURL)))
@@ -712,14 +734,41 @@ struct WikipediaSummary: Codable {
     let extract: String
     let title: String
     let thumbnail: Thumbnail?
+    
+    // Injected manually later:
+       var use: String? = nil
+       var edibility: String? = nil
+       var conservation: String? = nil
 
     struct Thumbnail: Codable {
         let source: String
     }
 }
+
+// Used only when fetching specific parsed sections like "Uses"
+struct WikipediaExtendedInfo {
+    var use: String?
+    var edibility: String?
+    var conservation: String?
+}
+
+//MARK: Wikipedia functions
+//helper
+private func extractWikiField(_ text: String, field: String) -> String? {
+    let pattern = "==\\s*\(field.capitalized)\\s*==\\s*(.*?)\\s*(==|$)"
+    if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]),
+       let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+       let range = Range(match.range(at: 1), in: text) {
+        return text[range].trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    return nil
+}
+
 //getter
-func fetchWikipediaSummary(for familyName: String, completion: @escaping (WikipediaSummary?) -> Void) {
-    let encodedName = familyName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? familyName
+func fetchWikipediaSummary(for name: String, completion: @escaping (WikipediaSummary?) -> Void) {
+    let isScientific = name.contains(" ") == false
+    let cleanedName = isScientific ? name : name.capitalized
+    let encodedName = cleanedName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cleanedName
     guard let url = URL(string: "https://en.wikipedia.org/api/rest_v1/page/summary/\(encodedName)") else {
         completion(nil)
         return
@@ -727,13 +776,176 @@ func fetchWikipediaSummary(for familyName: String, completion: @escaping (Wikipe
 
     URLSession.shared.dataTask(with: url) { data, response, error in
         if let data = data {
-            let summary = try? JSONDecoder().decode(WikipediaSummary.self, from: data)
-            completion(summary)
+            do {
+                var summary = try JSONDecoder().decode(WikipediaSummary.self, from: data)
+
+                // 👇 Start parsing sections after summary loads
+                fetchWikipediaSections(for: cleanedName) { sectionMap in
+                    guard let sectionMap = sectionMap else {
+                        DispatchQueue.main.async { completion(summary) }
+                        return
+                    }
+
+                    let lowercasedMap = Dictionary(uniqueKeysWithValues: sectionMap.map { ($0.key.lowercased(), $0.value) })
+
+                    let dispatchGroup = DispatchGroup()
+
+                    if let useIndex = lowercasedMap.first(where: { $0.key.contains("use") })?.value {
+                        dispatchGroup.enter()
+                        fetchWikipediaSectionContent(for: cleanedName, sectionIndex: useIndex) { text in
+                            summary.use = text?.strippedWikiMarkup()
+                            dispatchGroup.leave()
+                        }
+                    }
+
+                    if let edibilityIndex = lowercasedMap.first(where: { $0.key.contains("edibility") || $0.key.contains("edible") })?.value {
+                        dispatchGroup.enter()
+                        fetchWikipediaSectionContent(for: cleanedName, sectionIndex: edibilityIndex) { text in
+                            summary.edibility = text?.strippedWikiMarkup()
+                            dispatchGroup.leave()
+                        }
+                    }
+
+                    if let conservationIndex = lowercasedMap.first(where: { $0.key.contains("conservation") })?.value {
+                        dispatchGroup.enter()
+                        fetchWikipediaSectionContent(for: cleanedName, sectionIndex: conservationIndex) { text in
+                            summary.conservation = text?.strippedWikiMarkup()
+                            dispatchGroup.leave()
+                        }
+                    }
+
+                    dispatchGroup.notify(queue: .main) {
+                        WikipediaSummaryCache.shared.set(summary, for: cleanedName)
+                        completion(summary)
+                    }
+                }
+
+            } catch {
+                print("❌ Wiki decode error for '\(name)':", error.localizedDescription)
+                completion(nil)
+            }
         } else {
+            print("❌ Wiki fetch failed for '\(name)':", error?.localizedDescription ?? "Unknown error")
             completion(nil)
         }
     }.resume()
 }
+func fetchWikipediaSections(for title: String, completion: @escaping ([String: Int]?) -> Void) {
+    let encodedTitle = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+    let urlString = "https://en.wikipedia.org/w/api.php?action=parse&page=\(encodedTitle)&prop=sections&format=json"
+    
+    guard let url = URL(string: urlString) else {
+        completion(nil)
+        return
+    }
+
+    URLSession.shared.dataTask(with: url) { data, _, error in
+        guard let data = data else {
+            completion(nil)
+            return
+        }
+
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let parse = json["parse"] as? [String: Any],
+               let sections = parse["sections"] as? [[String: Any]] {
+                
+                var sectionIndices: [String: Int] = [:]
+                for section in sections {
+                    if let line = section["line"] as? String,
+                       let indexString = section["index"] as? String,
+                       let index = Int(indexString) {
+                        sectionIndices[line.lowercased()] = index
+                    }
+                }
+                completion(sectionIndices)
+            } else {
+                completion(nil)
+            }
+        } catch {
+            completion(nil)
+        }
+    }.resume()
+}
+func fetchWikipediaSectionContent(for title: String, sectionIndex: Int, completion: @escaping (String?) -> Void) {
+    let encodedTitle = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+    let urlString = "https://en.wikipedia.org/w/api.php?action=parse&page=\(encodedTitle)&prop=text&section=\(sectionIndex)&format=json"
+    
+    guard let url = URL(string: urlString) else {
+        completion(nil)
+        return
+    }
+
+    URLSession.shared.dataTask(with: url) { data, _, error in
+        guard let data = data else {
+            completion(nil)
+            return
+        }
+
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let parse = json["parse"] as? [String: Any],
+               let text = parse["text"] as? [String: Any],
+               let htmlString = text["*"] as? String {
+                
+                // Convert HTML to plain text
+                let plainText = htmlString.htmlToPlainText()
+                completion(plainText)
+            } else {
+                completion(nil)
+            }
+        } catch {
+            completion(nil)
+        }
+    }.resume()
+}
+//MARK: wiki markup clean
+extension String {
+    func strippedWikiMarkup() -> String {
+        var result = self
+
+        // Replace [[text|display]] or [[display]] → display
+        result = result.replacingOccurrences(
+            of: "\\[\\[(?:[^\\]|]*\\|)?([^\\]]+)\\]\\]",
+            with: "$1",
+            options: .regularExpression
+        )
+
+        // Remove <ref>...</ref> and <ref/>
+        result = result.replacingOccurrences(of: "<ref[^>]*>.*?</ref>", with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: "<ref[^>]*/>", with: "", options: .regularExpression)
+
+        // Remove wiki formatting like italics, bold, nowiki, templates
+        result = result.replacingOccurrences(of: "''+", with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: "\\{\\{.*?\\}\\}", with: "", options: .regularExpression)
+        result = result.replacingOccurrences(of: "<nowiki\\s*/?>", with: "", options: .regularExpression)
+
+        // Replace HTML entities
+        result = result.replacingOccurrences(of: "&nbsp;", with: " ")
+        result = result.replacingOccurrences(of: "&amp;", with: "&")
+        result = result.replacingOccurrences(of: "&lt;", with: "<")
+        result = result.replacingOccurrences(of: "&gt;", with: ">")
+        result = result.replacingOccurrences(of: "&quot;", with: "\"")
+
+        // Clean up whitespace
+        result = result.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    func htmlToPlainText() -> String {
+           guard let data = self.data(using: .utf8) else { return self }
+           let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+               .documentType: NSAttributedString.DocumentType.html,
+               .characterEncoding: String.Encoding.utf8.rawValue
+           ]
+           if let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
+               return attributedString.string
+           }
+           return self
+       }
+
+}
+
+
 //for caching
 class WikipediaSummaryCache {
     static let shared = WikipediaSummaryCache()

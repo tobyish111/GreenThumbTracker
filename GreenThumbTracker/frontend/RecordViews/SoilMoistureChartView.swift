@@ -13,6 +13,13 @@ struct SoilMoistureChartView: View {
        @State private var selectedRange: TimeRange = .week
        @State private var saveConfirmationMessage: String?
        @Environment(\.dismiss) private var dismiss
+    
+    private var dateLabelFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/dd"
+        return formatter
+    }
+
 
        enum TimeRange: String, CaseIterable, Identifiable {
            case week = "Past Week"
@@ -57,6 +64,20 @@ struct SoilMoistureChartView: View {
                            .interpolationMethod(.catmullRom)
                            .foregroundStyle(.brown)
                            .symbol(Circle())
+                       }
+                   }
+               }
+               .chartXAxis {
+                   AxisMarks(values: .stride(by: .day)) { value in
+                       AxisGridLine()
+                       AxisTick()
+                       AxisValueLabel {
+                           if let dateValue = value.as(Date.self) {
+                               Text(dateLabelFormatter.string(from: dateValue))
+                                   .font(.caption2)
+                           } else {
+                               EmptyView()
+                           }
                        }
                    }
                }

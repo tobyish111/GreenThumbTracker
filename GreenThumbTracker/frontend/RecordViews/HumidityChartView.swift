@@ -12,6 +12,13 @@ struct HumidityChartView: View {
         @State private var selectedRange: TimeRange = .week
         @State private var saveConfirmationMessage: String?
         @Environment(\.dismiss) private var dismiss
+    
+    private var dateLabelFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/dd"
+        return formatter
+    }
+
 
         enum TimeRange: String, CaseIterable, Identifiable {
             case week = "Past Week"
@@ -59,6 +66,21 @@ struct HumidityChartView: View {
                         }
                     }
                 }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day)) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let dateValue = value.as(Date.self) {
+                                Text(dateLabelFormatter.string(from: dateValue))
+                                    .font(.caption2)
+                            } else {
+                                EmptyView()
+                            }
+                        }
+                    }
+                }
+
                 .chartYAxisLabel("Humidity %")
                 .frame(height: 300)
                 .padding()
@@ -106,7 +128,14 @@ struct HumidityChartView: View {
 
                     HStack {
                         Button(action: {
-                            let renderer = ImageRenderer(content: ChartContainerView)
+                            let exportView = ChartContainerView
+                                .padding()
+                                .background(.white)
+                                .cornerRadius(20)
+                                .shadow(radius: 4)
+
+                            let renderer = ImageRenderer(content: exportView)
+                            renderer.scale = 3.0 // high resolution
                             if let image = renderer.uiImage {
                                 let saver = PhotoSaveHelper { success in
                                     if success {

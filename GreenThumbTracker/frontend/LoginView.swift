@@ -11,6 +11,7 @@ struct LoginView: View {
     @State private var showingLoginForm: Bool = false
     @State private var showingRegisterForm: Bool = false
        @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
+    @EnvironmentObject var appState: AppState
 
        var body: some View {
                ZStack {
@@ -53,6 +54,7 @@ struct LoginView: View {
                            }
                            .sheet(isPresented: $showingLoginForm) {
                                LoginFormView(showingLoginForm: $showingLoginForm)
+                                   .environmentObject(appState)
                            }
 
                            GreenButton(title: "Sign Up") {
@@ -94,8 +96,8 @@ struct GreenButton: View {
 
 struct LoginFormView: View {
     @Binding var showingLoginForm: Bool
-       @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
-       @AppStorage("authToken") private var authToken: String = ""
+    @EnvironmentObject var appState: AppState
+
 
        @State private var username: String = ""
        @State private var password: String = ""
@@ -153,11 +155,13 @@ struct LoginFormView: View {
                                switch result {
                                case .success(let loginResponse):
                                    print("Login succeeded:", loginResponse)
-                                   authToken = loginResponse.token
-                                   showingLoginForm = false
-                                   withAnimation(.easeInOut(duration: 0.6)){
-                                       isLoggedIn = true
+                                   DispatchQueue.main.async {
+                                       withAnimation(.easeInOut(duration: 0.6)) {
+                                           appState.setAuthToken(loginResponse.token)
+                                           showingLoginForm = false
+                                       }
                                    }
+
                                case .failure(let error):
                                    print("Login failed:", error)
                                    errorMessage = "Invalid username or password"

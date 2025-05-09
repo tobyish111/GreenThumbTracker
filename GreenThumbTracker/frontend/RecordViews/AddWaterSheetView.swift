@@ -81,6 +81,7 @@ struct AddWaterSheet: View {
             guard let amount = Int(amountText) else {
                 withAnimation {
                     errorMessage = "Invalid amount."
+                    isSubmitting = false
                 }
                 return
             }
@@ -109,11 +110,17 @@ struct AddWaterSheet: View {
                     amount: amount,
                     date: dateString
                 ) { result in
-                    if case .success = result {
+                    switch result {
+                    case .success:
+                        isSubmitting = false
                         onSubmit()
-                    } else {
-                        errorMessage = "Failed to add record."
+                    case .failure(let error):
+                        DispatchQueue.main.async {
+                            isSubmitting = false
+                            errorMessage = error.localizedDescription
+                        }
                     }
+
                 }
             }
         }

@@ -40,8 +40,10 @@ struct PlantView: View {
     @State private var showingTemperatureEditSheet = false
     @State private var showTemperatureChart = false
     @State private var showMultiTrendChart = false
-    
-
+    @State private var showingImagePicker = false
+    @State private var selectedImage: UIImage? = nil
+    @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var inputImage: UIImage?
 
     var body: some View {
         ZStack {
@@ -54,6 +56,17 @@ struct PlantView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     HStack {
+                        //MARK: Delete Image button
+                        if selectedImage != nil {
+                            Button(role: .destructive) {
+                                PlantImageManager.deleteImage(for: plant.id)
+                                self.selectedImage = nil
+                            } label: {
+                                Label("Delete Photo", systemImage: "trash")
+                                    .foregroundColor(.red)
+                                    .padding(.horizontal)
+                            }
+                        }
                         Spacer()
                         Button(action: {
                             showingEditSheet = true
@@ -68,14 +81,60 @@ struct PlantView: View {
                     }//end hstack
                     .padding(.top, 10)
                     .padding(.trailing)
+                    //MARK: Image ZStack
+                    ZStack {
+                        Rectangle()
+                            .fill(Color.green.opacity(0.2))
+                            .frame(height: 180)
+                            .cornerRadius(12)
 
-                    Image(systemName: "leaf.circle.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120, height: 120)
-                        .foregroundColor(.green)
-                        .shadow(color: .green.opacity(0.5), radius: 8, x: 0, y: 4)
-                        .padding(.top, 20)
+                        if let savedImage = PlantImageManager.loadImage(for: plant.id) {
+                            Image(uiImage: savedImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 180)
+                                .clipped()
+                                .cornerRadius(12)
+                        } else {
+                            VStack {
+                                Image(systemName: "leaf.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 60, height: 60)
+                                    .foregroundColor(.green.opacity(0.6))
+                                Text("Tap to Add Photo")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .onTapGesture {
+                        let alert = UIAlertController(title: "Select Source", message: nil, preferredStyle: .actionSheet)
+                        alert.addAction(UIAlertAction(title: "Camera", style: .default) { _ in
+                            sourceType = .camera
+                            showingImagePicker = true
+                        })
+                        alert.addAction(UIAlertAction(title: "Photo Library", style: .default) { _ in
+                            sourceType = .photoLibrary
+                            showingImagePicker = true
+                        })
+                        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let rootVC = windowScene.windows.first?.rootViewController {
+                            rootVC.present(alert, animated: true)
+                        }
+                    }
+
+                    .sheet(isPresented: $showingImagePicker) {
+                        ImagePicker(sourceType: sourceType, image: $selectedImage)
+                    }
+                    .onChange(of: selectedImage) { _, newImage in
+                        if let image = newImage {
+                            PlantImageManager.saveImage(image, for: plant.id)
+                            self.selectedImage = PlantImageManager.loadImage(for: plant.id)
+                        }
+                    }
                     
                     //confirmation message
                     if let message = waterSuccessBanner {
@@ -113,6 +172,7 @@ struct PlantView: View {
                     
                     //Latest Growth
                     // Growth Log Section
+                    //MARK: Growth Records
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             Label("Growth Records", systemImage: "arrow.up.right.circle.fill")
@@ -249,6 +309,7 @@ struct PlantView: View {
                     //end growth log section
                     
                     //Watering Log Section
+                    //MARK: Water Records
                     VStack(alignment: .leading, spacing: 12) {
                         //Section Title with total entries
                         //chart headers
@@ -384,6 +445,7 @@ struct PlantView: View {
                     //end water records
                     
                     //humidity records
+                    //MARK: Humidity Records
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             Label("Humidity Records", systemImage: "humidity.fill")
@@ -496,6 +558,7 @@ struct PlantView: View {
                     .shadow(radius: 4)
 
                     //light records
+                    //MARK: Light Records
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             Label("Light Records", systemImage: "sun.max.fill")
@@ -613,6 +676,7 @@ struct PlantView: View {
                     .shadow(radius: 4)
                     
                     //soil records
+                    //MARK: Soil Records
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             Label("Soil Moisture Records", systemImage: "drop.triangle.fill")
@@ -729,6 +793,7 @@ struct PlantView: View {
                     .shadow(radius: 4)
 
                     //temp records
+                    //MARK: Temperature Records
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
                             Label("Temperature Records", systemImage: "thermometer.sun.fill")
@@ -842,6 +907,7 @@ struct PlantView: View {
                     .cornerRadius(12)
                     .shadow(radius: 4)
                     //Multi-Record Trend Button
+                    //MARK: Multi-Triend
                     VStack(spacing: 12) {
                         Button(action: {
                             showMultiTrendChart = true
@@ -881,6 +947,7 @@ struct PlantView: View {
             }
             .navigationTitle("Plant Details")
             .onAppear {
+                self.selectedImage = PlantImageManager.loadImage(for: plant.id)
                 loadGrowthData()
                 loadWaterData()
                 loadHumidityData()
@@ -894,6 +961,7 @@ struct PlantView: View {
         }
 
     }
+    //MARK: END VIEW
     // MARK: - Temperature Record Operations
     func loadTemperatureData() {
         APIManager.shared.fetchTemperatureRecords(forPlantId: plant.id) { result in

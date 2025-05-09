@@ -22,9 +22,17 @@ struct EncyclopediaMenuView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
-                Toggle(isOn: $useCachedData) {
-                    Label("Load Cached Data Instead", systemImage: "archivebox")
-                        .font(.headline)
+                    HStack {
+                        Label("Load Cached Data", systemImage: "archivebox")
+                            .font(.headline)
+                            .foregroundColor(.green)
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: $useCachedData)
+                            .labelsHidden()
+                            .tint(.green)
+                    
                 }
                 .padding()
                 .background(Color.white.opacity(0.9))
@@ -47,7 +55,7 @@ struct EncyclopediaMenuView: View {
                 }
             }
         }
-        .navigationTitle("Trefle Menu")
+        .navigationTitle("Explore Plants")
         .navigationBarTitleDisplayMode(.inline)
 
     }

@@ -230,7 +230,7 @@ struct ViewPlantsView: View {
             ZStack(alignment: .bottomTrailing) {
                 VStack(alignment: .leading, spacing: 10) {
                     // Image or placeholder
-                    if let image = image {
+                    if let image = PlantImageManager.loadImage(for: plant.id) {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFill()

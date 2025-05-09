@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct HomePageView: View {
-    @AppStorage("isLoggedIn") private var isLoggedIn: Bool = true
-        @EnvironmentObject var networkMonitor: NetworkMonitor
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var networkMonitor: NetworkMonitor
         @Namespace private var navNamespace
         @State private var showCustomLogoutPrompt = false
         @State private var isLoggingOut = false
@@ -175,7 +175,7 @@ struct HomePageView: View {
                 switch result {
                 case .success:
                     withAnimation(.easeInOut(duration: 0.6)) {
-                        isLoggedIn = false
+                        appState.isLoggedIn = false
                     }
                 case .failure(let error):
                     print("❌ Logout failed: \(error.localizedDescription)")

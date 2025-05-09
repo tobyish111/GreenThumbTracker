@@ -12,6 +12,7 @@ struct RegionDetailView: View {
     @State private var plants: [TreflePlant] = []
         @State private var regionDetails: TrefleDistributionRegionDetails?
         @State private var errorMessage: String?
+    @State private var wikiSummary: WikipediaSummary?
 
         var body: some View {
             ZStack {
@@ -109,11 +110,47 @@ struct RegionDetailView: View {
                                 .cornerRadius(12)
                                 .shadow(radius: 4)
                             }
-                            if !plants.isEmpty {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Plants in this Region")
+                            // Wikipedia Description
+                            if let summary = wikiSummary {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("About This Region")
                                         .font(.headline)
                                         .foregroundColor(.green)
+
+                                    if let thumbnail = summary.thumbnail?.source, let url = URL(string: thumbnail) {
+                                        AsyncImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(height: 140)
+                                                .cornerRadius(12)
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                    }
+
+                                    Text(summary.extract)
+                                        .font(.body)
+                                        .foregroundColor(.primary)
+                                }
+                                .padding()
+                                .background(Color.white.opacity(0.9))
+                                .cornerRadius(12)
+                                .shadow(radius: 4)
+                            }
+
+                            if !plants.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Plants in this Region")
+                                            .font(.headline)
+                                            .foregroundColor(.green)
+
+                                        Text("Note: Only the first 20 plants are shown.")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
 
                                     ForEach(plants) { plant in
                                         NavigationLink(destination: TreflePlantView(plant: plant)) {
@@ -143,6 +180,7 @@ struct RegionDetailView: View {
             .onAppear {
                 loadRegionDetails()
                 loadPlantsInRegion()
+                loadRegionSummary()
             }
         }
 
@@ -176,6 +214,35 @@ struct RegionDetailView: View {
             }
         }
     }
+    private func loadRegionSummary() {
+        if let cached = TrefleRegionDetailsCache.shared.regionDetailsMap[slug] {
+            self.regionDetails = cached
+            fetchWikipediaSummary(for: cached.name) { summary in
+                DispatchQueue.main.async {
+                    self.wikiSummary = summary
+                }
+            }
+            return
+        }
+
+        TrefleAPI.shared.getDistributionDetails(slug: slug) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let details):
+                    TrefleRegionDetailsCache.shared.regionDetailsMap[slug] = details
+                    self.regionDetails = details
+                    fetchWikipediaSummary(for: details.name) { summary in
+                        DispatchQueue.main.async {
+                            self.wikiSummary = summary
+                        }
+                    }
+                case .failure(let err):
+                    self.errorMessage = err.localizedDescription
+                }
+            }
+        }
+    }
+
 
     }
 

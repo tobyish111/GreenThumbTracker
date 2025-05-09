@@ -15,6 +15,13 @@ struct WaterChartView: View {
       @State private var selectedRange: TimeRange = .week
       @State private var saveConfirmationMessage: String?
       @Environment(\.dismiss) private var dismiss
+    
+    private var dateLabelFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/dd"
+        return formatter
+    }
+
 
       enum TimeRange: String, CaseIterable, Identifiable {
           case week = "Past Week"
@@ -44,34 +51,55 @@ struct WaterChartView: View {
 
       // This chart and its title will be snapshotted
       @ViewBuilder
-      private var ChartContainerView: some View {
-          VStack(spacing: 8) {
-              Text("Watering Over \(selectedRange.rawValue)")
-                  .font(.headline)
-                  .foregroundColor(.blue)
+    private var ChartContainerView: some View {
+        VStack(spacing: 8) {
+            Text("Watering Over \(selectedRange.rawValue)")
+                .font(.headline)
+                .foregroundColor(.blue)
+            
+            Chart {
+                ForEach(filteredRecords.sorted(by: { $0.date < $1.date })) { record in
+                    if let date = isoFormatter.date(from: record.date) {
+                        LineMark(
+                            x: .value("Date", date),
+                            y: .value("Amount", record.amount)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(.blue)
+                        .symbol(Circle())
+                    }
+                }
+            }
+            .chartYAxisLabel("Amount")
+            .frame(height: 300)
+            .padding()
+            .background(Color.white.opacity(0.9))
+            .cornerRadius(12)
+            .shadow(radius: 4)
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day)) { value in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let dateValue = value.as(Date.self) {
+                            Text(dateLabelFormatter.string(from: dateValue))
+                                .font(.caption2)
+                        } else {
+                            EmptyView()
+                        }
+                    }
+                }
+            }
 
-              Chart {
-                  ForEach(filteredRecords.sorted(by: { $0.date < $1.date })) { record in
-                      if let date = isoFormatter.date(from: record.date) {
-                          LineMark(
-                              x: .value("Date", date),
-                              y: .value("Amount", record.amount)
-                          )
-                          .interpolationMethod(.catmullRom)
-                          .foregroundStyle(.blue)
-                          .symbol(Circle())
-                      }
-                  }
-              }
-              .chartYAxisLabel("Amount")
-              .frame(height: 300)
-              .padding()
-              .background(Color.white.opacity(0.9))
-              .cornerRadius(12)
-              .shadow(radius: 4)
-          }
-      }
-
+            .chartXAxis{
+                AxisMarks(values: .stride(by: .day, count: selectedRange == .week ? 1 : (selectedRange == .month ? 7 : 30))) { value in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                }
+            }
+        }
+    }
       var body: some View {
           ZStack(alignment: .topTrailing) {
               VStack(spacing: 16) {

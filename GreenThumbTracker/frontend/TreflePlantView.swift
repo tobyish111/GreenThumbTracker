@@ -26,11 +26,8 @@ struct TreflePlantView: View {
 
                        if let details = plantDetails {
                            let species = details.main_species
-                           Text("Loaded Plant: \(details.scientific_name)")
-                               .foregroundColor(.blue)
-
+                      
                            TrefleInfoCard(details: details)
-                           
                            
                            if let regions = species.distributions?.native {
                                DistributionExplorer(
@@ -55,21 +52,19 @@ struct TreflePlantView: View {
            }
            .onAppear {
                print("🌿 Fetching details for slug: \(plant.slug)")
-               print("Plant id: \(plant.id)")
                TrefleAPI.shared.getPlantDetails(id: plant.id) { result in
                    DispatchQueue.main.async {
                        switch result {
                        case .success(let details):
-                           print("Successfully received plant details")
                            self.plantDetails = details
                            self.forceRefresh.toggle()
-                           print("Debug plantDetails: \(details)")
                        case .failure(let error):
                            print("❌ Failed to load plant details: \(error)")
                        }
                    }
                }
            }
+
        }
    }
 
@@ -112,42 +107,44 @@ struct TreflePlantView: View {
        }
    }
 
-   struct TrefleInfoCard: View {
-       let details: TreflePlantDetails
+struct TrefleInfoCard: View {
+    let details: TreflePlantDetails
 
-       var body: some View {
-           let species = details.main_species
-           VStack(alignment: .leading, spacing: 8) {
-               Label("Basic Info", systemImage: "info.circle")
-                   .font(.headline)
-                   .foregroundColor(.primary)
+    var body: some View {
+        let species = details.main_species
 
-               if let family = species.family?.name {
-                   Text("🌿 Family: \(family)")
-               }
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Basic Info", systemImage: "info.circle")
+                .font(.headline)
+                .foregroundColor(.primary)
 
-               if let genus = species.genus?.name {
-                   Text("🔎 Genus: \(genus)")
-               }
+            if let family = species.family?.name {
+                Text("🌿 Family: \(family)")
+            }
 
-               if let avgHeight = species.specifications?.average_height?.cm {
-                   Text("📏 Avg Height: \(Int(avgHeight)) cm")
-               }
+            if let genus = species.genus?.name {
+                Text("🔎 Genus: \(genus)")
+            }
 
-               if let toxicity = species.specifications?.toxicity {
-                   Text("☠️ Toxicity: \(toxicity)")
-               }
+            if let avgHeight = species.specifications?.average_height?.cm {
+                Text("📏 Avg Height: \(Int(avgHeight)) cm")
+            }
 
-               if let observations = details.observations {
-                   Text("🗺️ Observations: \(observations)")
-               }
-           }
-           .padding()
-           .background(Color.white.opacity(0.9))
-           .cornerRadius(12)
-           .shadow(radius: 4)
-       }
-   }
+            if let toxicity = species.specifications?.toxicity, !toxicity.isEmpty {
+                Text("☠️ Toxicity: \(toxicity.capitalized)")
+            }
+
+            if let observations = details.observations, !observations.isEmpty {
+                Text("🗺️ Observations: \(observations)")
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.9))
+        .cornerRadius(12)
+        .shadow(radius: 4)
+    }
+}
+
 
    struct TrefleDistributionCard: View {
        let distributions: [DistributionRegion]
