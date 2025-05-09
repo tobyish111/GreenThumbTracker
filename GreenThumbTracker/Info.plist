@@ -26,7 +26,11 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>3</string>
+    <key>CFBundleName</key>
+    <string>GreenThumbTracker</string>
+    <key>CFBundleDisplayName</key>
+    <string>GreenThumbTracker</string>
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>com.greenthumbtracker.frostCheck</string>
