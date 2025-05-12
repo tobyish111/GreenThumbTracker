@@ -9,7 +9,7 @@ import Foundation
 //function to call to any endpoint from our db api!
 class APIManager {
     static let shared = APIManager() //singleton instance
-    //private let baseURL = "http://192.168.1.11:8800/api"         //dev endpoint
+    //private let baseURL = "http://0.0.0.0:8800/api"         //dev endpoint
     //private let baseURL = "https://greenthumbtracker.org/api" //prod endpoint (aws)
     private let baseURL = "https://greenthumbtracker.com/api" //prod endpoint (Oracle Cloud)
     

@@ -116,79 +116,79 @@ struct ViewPlantsView: View {
                             .padding(.top,10)
                         }
                     }
-                    
+                    Spacer()
+                }//end vstack
+                
+                
+                .padding(.top, 50)
+                .ignoresSafeArea()
+                .onAppear {
+                    if !appState.isOffline{
+                        loadPlants()
+                    }
                 }
                 
-                Spacer()
-            }
-            .padding(.top, 50)
-            .ignoresSafeArea()
-            .onAppear {
-                if !appState.isOffline{
-                    loadPlants()
-                }
-            }
-            
-            if showDeleteConfirmation, let plant = plantToDelete {
-                Color.black.opacity(0.4).ignoresSafeArea()
-                
-                VStack(spacing: 20) {
-                    Text("Delete \(plant.name)?")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.green)
+                if showDeleteConfirmation, let plant = plantToDelete {
+                    Color.black.opacity(0.4).ignoresSafeArea()
                     
-                    Text("Are you sure you want to remove this plant from your garden?")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.gray)
-                    
-                    HStack(spacing: 30) {
-                        Button("Cancel") {
-                            showDeleteConfirmation = false
-                        }
-                        .font(.headline)
-                        .foregroundColor(.secondary)
+                    VStack(spacing: 20) {
+                        Text("Delete \(plant.name)?")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
                         
-                        Button("Delete") {
-                            if let plantId = plantToDelete?.id {
-                                APIManager.shared.deletePlant(id: plantId) { result in
-                                    DispatchQueue.main.async {
-                                        switch result {
-                                        case .success:
-                                            deletionMessage = "Plant deleted successfully!"
-                                            showDeleteConfirmation = false
-                                            plantToDelete = nil
-                                            loadPlants()
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                                withAnimation {
-                                                    deletionMessage = nil
+                        Text("Are you sure you want to remove this plant from your garden?")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(.gray)
+                        
+                        HStack(spacing: 30) {
+                            Button("Cancel") {
+                                showDeleteConfirmation = false
+                            }
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            
+                            Button("Delete") {
+                                if let plantId = plantToDelete?.id {
+                                    APIManager.shared.deletePlant(id: plantId) { result in
+                                        DispatchQueue.main.async {
+                                            switch result {
+                                            case .success:
+                                                deletionMessage = "Plant deleted successfully!"
+                                                showDeleteConfirmation = false
+                                                plantToDelete = nil
+                                                loadPlants()
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                                    withAnimation {
+                                                        deletionMessage = nil
+                                                    }
                                                 }
+                                            case .failure(let error):
+                                                errorMessage = "Deletion failed: \(error.localizedDescription)"
+                                                showDeleteConfirmation = false
                                             }
-                                        case .failure(let error):
-                                            errorMessage = "Deletion failed: \(error.localizedDescription)"
-                                            showDeleteConfirmation = false
                                         }
                                     }
                                 }
                             }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.red)
+                            .cornerRadius(8)
                         }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(Color.red)
-                        .cornerRadius(8)
                     }
-                }
-                .padding()
-                .frame(maxWidth: 300)
-                .background(Color.white)
-                .cornerRadius(16)
-                .shadow(radius: 10)
-                .transition(.scale)
-            }
-        }//end nav stack
+                    .padding()
+                    .frame(maxWidth: 300)
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(radius: 10)
+                    .transition(.scale)
+                }//end if
+            }//end nav stack
+        }
     }
     
     
@@ -300,4 +300,5 @@ struct ViewPlantsView: View {
   
 #Preview {
     ViewPlantsView()
+        .environmentObject(AppState())
 }
