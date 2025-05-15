@@ -6,10 +6,14 @@
 	<string>$(EXECUTABLE_NAME)</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app lets you choose a plant image from your photo library.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>This app uses the camera to take photos of your plants.</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>UIUserInterfaceStyle</key>
+    <string>Light</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app uses your location to check for frost warnings and help protect your plants.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -26,7 +30,7 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>CFBundleVersion</key>
-    <string>3</string>
+    <string>6</string>
     <key>CFBundleName</key>
     <string>GreenThumbTracker</string>
     <key>CFBundleDisplayName</key>

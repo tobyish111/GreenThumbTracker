@@ -22,6 +22,7 @@ struct GreenThumbTrackerApp: App {
     let notificationDelegate = NotificationDelegate()
     
     init() {
+        UIView.appearance().overrideUserInterfaceStyle = .light
         print("✅ Injecting AppState and NetworkMonitor into RootViewRouter")
     }
     var body: some Scene {

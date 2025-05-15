@@ -44,6 +44,8 @@ struct PlantView: View {
     @State private var selectedImage: UIImage? = nil
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var inputImage: UIImage?
+    @State private var pendingSourceType: UIImagePickerController.SourceType?
+
 
     var body: some View {
         ZStack {
@@ -106,24 +108,39 @@ struct PlantView: View {
                                     .font(.caption)
                                     .foregroundColor(.gray)
                             }
+                            .frame(height: 180)
                         }
                     }
+                    .contentShape(Rectangle()) //Restricts tap gesture to image area only
                     .onTapGesture {
                         let alert = UIAlertController(title: "Select Source", message: nil, preferredStyle: .actionSheet)
+
                         alert.addAction(UIAlertAction(title: "Camera", style: .default) { _ in
-                            sourceType = .camera
-                            showingImagePicker = true
+                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                pendingSourceType = .camera
+                            } else {
+                                print("🚫 Camera not available on this device.")
+                                let fallbackAlert = UIAlertController(
+                                    title: "Camera Unavailable",
+                                    message: "Your device does not support camera access. Please use your photo library instead.",
+                                    preferredStyle: .alert
+                                )
+                                fallbackAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                   let rootVC = windowScene.windows.first?.rootViewController {
+                                    rootVC.present(fallbackAlert, animated: true)
+                                }
+                            }
                         })
+
                         alert.addAction(UIAlertAction(title: "Photo Library", style: .default) { _ in
-                            sourceType = .photoLibrary
-                            showingImagePicker = true
+                            pendingSourceType = .photoLibrary
                         })
+
                         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
 
                         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                            let rootVC = windowScene.windows.first?.rootViewController {
-                            
-                            // ✅ Fix: Handle iPad popover requirements
                             if let popover = alert.popoverPresentationController, UIDevice.current.userInterfaceIdiom == .pad {
                                 popover.sourceView = rootVC.view
                                 popover.sourceRect = CGRect(x: rootVC.view.bounds.midX,
@@ -132,21 +149,22 @@ struct PlantView: View {
                                                             height: 0)
                                 popover.permittedArrowDirections = []
                             }
-                            
                             rootVC.present(alert, animated: true)
                         }
                     }
 
 
                     .sheet(isPresented: $showingImagePicker) {
-                        ImagePicker(sourceType: sourceType, image: $selectedImage)
+                        ImagePicker(sourceType: sourceType, image: $selectedImage, plantID: plant.id)
                     }
-                    .onChange(of: selectedImage) { _, newImage in
-                        if let image = newImage {
-                            PlantImageManager.saveImage(image, for: plant.id)
-                            self.selectedImage = PlantImageManager.loadImage(for: plant.id)
+                    .onChange(of: pendingSourceType) { _, newValue in
+                        if let type = newValue {
+                            sourceType = type
+                            showingImagePicker = true
+                            pendingSourceType = nil
                         }
                     }
+
                     
                     //confirmation message
                     if let message = waterSuccessBanner {
@@ -813,7 +831,7 @@ struct PlantView: View {
                                 .foregroundColor(.red)
 
                             Spacer()
-
+                            Spacer()
                             Button(action: {
                                 loadTemperatureData()
                             }) {

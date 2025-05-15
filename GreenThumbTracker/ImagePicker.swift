@@ -21,18 +21,26 @@ struct ImagePicker: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let image = info[.originalImage] as? UIImage {
                 parent.image = image
+
+                // ✅ SAVE immediately here
+                if let plantID = parent.plantID {
+                    PlantImageManager.saveImage(image, for: plantID)
+                    print("✅ Saved image immediately after capture for plant \(plantID)")
+                }
             }
+
             parent.presentationMode.wrappedValue.dismiss()
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.presentationMode.wrappedValue.dismiss()
         }
-    }
+    }//end coordinator class
 
     @Environment(\.presentationMode) var presentationMode
     var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @Binding var image: UIImage?
+    var plantID: Int?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
